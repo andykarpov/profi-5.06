@@ -11,15 +11,23 @@ use IEEE.numeric_std.ALL;
 entity extend is                    
 port(
 
-zx14mhz			:in std_logic; -- частота текущего тактового генератора 14 или ХМГц от Профи
-iorqge_sl		:in std_logic; -- IORQGE слота
-cpld_121		:out std_logic := 'Z'; -- тестовый сигнал выходящий на пин PLS для отладки
-f8				:in std_logic; -- частота 8 МГц для бетадиска
-turbo			:in std_logic; -- сигнал TURBO - 0=On, 1=Off
-c_dffd			:buffer std_logic; -- Клок порта DFFD c полной дешифрацией и корректировкой
-							-- порта FD, для старых нижних плат профи с неполной дешифрацией
+zx14mhz			:in std_logic; -- ������� �������� ��������� ���������� 14 ��� ���� �� �����
+iorqge_sl		:in std_logic; -- IORQGE �����
+--cpld_121		:out std_logic := 'Z'; -- �������� ������ ��������� �� ��� PLS ��� �������
+f8				:in std_logic; -- ������� 8 ��� ��� ���������
+turbo			:in std_logic; -- ������ TURBO - 0=On, 1=Off
+c_dffd			:buffer std_logic; -- ���� ����� DFFD c ������ ����������� � ��������������
+							-- ����� FD, ��� ������ ������ ���� ����� � �������� �����������
+-- PS2 Keyboard
+PS2_KBCLK		: in std_logic;
+PS2_KBDAT		: in std_logic;
+
+-- PS2 Mouse
+PS2_MSCLK	: inout std_logic;
+PS2_MSDAT	: inout std_logic;		
 
 ----------------Z80----------------------
+--reset			:out std_logic;
 reset			:in std_logic;
 wr_z			:in std_logic;
 rd_z			:in std_logic;
@@ -43,12 +51,12 @@ bc1a			:out std_logic;
 bc1b			:out std_logic;
 bdira			:out std_logic;
 bdirb			:out std_logic;
-ay_clk			:out std_logic; -- альтернативный клок для музпроцессоров.
+ay_clk			:out std_logic; -- �������������� ���� ��� ��������������.
 
 -----------------DATA BUFFER------------------------
-t_ap6			:out std_logic; -- определяет направление буфера шины данных АП6
+t_ap6			:out std_logic; -- ���������� ����������� ������ ���� ������ ��6
 oe_ap6			:out std_logic; 
-t_lvc245		:out std_logic; -- определяет направление буфера шины данных LVC245
+t_lvc245		:out std_logic; -- ���������� ����������� ������ ���� ������ LVC245
 
 -----------------SAA------------------------
 saa_cs			:buffer std_logic;
@@ -69,7 +77,7 @@ cache_we		:out std_logic;
 cache_oe		:out std_logic;
 
 ----------------Serial port------------------------
-lwr				:out std_logic; -- WR для компорта
+lwr				:out std_logic; -- WR ��� ��������
 vi53_cs			:buffer std_logic;
 ladr5			:out std_logic;
 ladr6			:out std_logic;
@@ -82,15 +90,15 @@ ri				:in std_logic;
 dcd				:in std_logic;
 
 -----------------mega-----------------------
-READY_n			:in std_logic;
-INT0I			:in std_logic;
-INT0			:out std_logic;
+--READY_n			:in std_logic;
+--INT0I			:in std_logic;
+--INT0			:out std_logic;
 INT1			:out std_logic;
-ADR0			:out std_logic;
-ADR1			:out std_logic;
-SEL				:buffer std_logic;
-ATM_PB3			:out std_logic := 'Z'; -- сигнал для часов Profi
-ATM_PB4			:out std_logic := 'Z'; -- сигнал для часов Profi
+--ADR0			:out std_logic;
+--ADR1			:out std_logic;
+SEL				:out std_logic :='0';
+--ATM_PB3			:out std_logic := 'Z'; -- ������ ��� ����� Profi
+--ATM_PB4			:out std_logic := 'Z'; -- ������ ��� ����� Profi
 
 ---------------HDD------------------
 hdd_a0			:out std_logic;
@@ -154,12 +162,56 @@ COMPONENT SPI
         );
 END COMPONENT ;
 ---------------------------------------------------------------------------
+--component zxkbd is
+--	port(
+--		clk				:in std_logic;
+--		reset			:in std_logic;
+--		res_k			:out std_logic;
+--		ps2_clk			:in std_logic;
+--		ps2_data		:in std_logic;
+--		zx_kb_scan		:in std_logic_vector(7 downto 0);
+--		zx_kb_out		:out std_logic_vector(4 downto 0);
+--		k_joy			:out std_logic_vector(4 downto 0); 
+--		f				:out std_logic_vector(12 downto 1);   
+--		num_joy			:out std_logic  
+--);
+--end component;
+
+--component PS2_KEYB is
+--	port(
+--		a				:in std_logic_vector(7 downto 0);
+--		res_n			:in std_logic;
+--		clk				:in std_logic;
+--		kbd_clk			:in std_logic;
+--		kbd_dat			:in std_logic;
+--		key_row			:out std_logic_vector(4 downto 0)
+--
+--);
+--end component;
+--
+----ps2 keyboard
+--signal kb_a_bus		: std_logic_vector(7 downto 0);
+--signal kb_do_bus	: std_logic_vector(4 downto 0);
+signal port_fe_sel	: std_logic;
+
+-- PS/2 Mouse
+signal ms_but_bus			: std_logic_vector(7 downto 0);
+signal ms_present			: std_logic;
+signal ms_left				: std_logic;
+signal ms_x_bus			: std_logic_vector(7 downto 0);
+signal ms_y_bus			: std_logic_vector(7 downto 0);
+signal ms_clk_out			: std_logic;
+signal ms_buf_out			: std_logic;
+signal ms_port_fadf		: std_logic;
+signal ms_port_fbdf		: std_logic;
+signal ms_port_ffdf		: std_logic;
+signal ms_port				: std_logic;
 
 ----------------Z80----------------------
 signal res				:std_logic;
-signal wr				:std_logic; -- синхронный WR
-signal rd				:std_logic; -- синхронный RD
-signal iorq				:std_logic; -- синхронный iorq
+signal wr				:std_logic; -- ���������� WR
+signal rd				:std_logic; -- ���������� RD
+signal iorq				:std_logic; -- ���������� iorq
 signal m1				:std_logic;
 signal mrq				:std_logic;
 signal Data_reg			:std_logic_vector (7 downto 0);
@@ -238,10 +290,10 @@ signal WAIT_IO_s		:std_logic;
 signal WAIT_C_STOP		:std_logic;
 
 ------------------Clock-----------------
-signal portAS			:std_logic;
-signal portDS			:std_logic;
-signal cseff7:			std_logic;
-signal peff7:			std_logic_vector(7 downto 0);
+--signal portAS			:std_logic;
+--signal portDS			:std_logic;
+--signal cseff7:			std_logic;
+--signal peff7:			std_logic_vector(7 downto 0);
 
 ----------------CACHE------------------
 signal cache_cs			:std_logic;
@@ -258,14 +310,14 @@ signal nSDCS:			std_logic;
 signal spi_iorqge:		std_logic;
 
 --------------------ZXMC-------------------
-signal p_sel:				std_logic;
-signal portFE:				std_logic;
-signal portF7:				std_logic;
-signal portEF:				std_logic;
-signal portDF:				std_logic;
-signal ports1:				std_logic;
-signal wait_mc:				std_logic;
-signal iorqge_mc:			std_logic;
+--signal p_sel:				std_logic;
+--signal portFE:				std_logic;
+--signal portF7:				std_logic;
+--signal portEF:				std_logic;
+--signal portDF:				std_logic;
+--signal ports1:				std_logic;
+--signal wait_mc:				std_logic;
+--signal iorqge_mc:			std_logic;
 
 ---------------------------------------------------------
 signal f14:				std_logic;
@@ -302,7 +354,18 @@ signal profi_ebl	: std_logic;
 begin
 
 f14 <= not zx14mhz;
-iorqge <= spi_iorqge or iorqge_mc or hdd_iorqge or not saa_cs or iorq_z or iorqge_sl;
+iorqge <= spi_iorqge or hdd_iorqge or not saa_cs or iorq_z or iorqge_sl; -- or iorqge_mc
+
+----ps2
+--port_fe_sel <= '1' when (adress (7 downto 0) = x"FE" and iorq = '0') else '0';
+--kb_a_bus <= adress (15 downto 8);
+--
+
+ms_left <= '0';
+ms_port_fadf <= '0' when	(iorq = '0' and rd = '0' and adress(15 downto 0) = "1111101011011111" and ms_present = '1' and iorqge = '0') else '1'; -- Mouse Port FADF[11111010_11011111] = <Z>1<MB><LB><RB>
+ms_port_fbdf <= '0' when	(iorq = '0' and rd = '0' and adress(15 downto 0) = "1111101111011111" and ms_present = '1' and iorqge = '0') else '1'; -- Port FBDF[11111011_11011111] = <X>
+ms_port_ffdf <= '0' when	(iorq = '0' and rd = '0' and adress(15 downto 0) = "1111111111011111" and ms_present = '1' and iorqge = '0') else '1'; -- Port FFDF[11111111_11011111] = <Y>
+ms_port <= ms_port_fadf and ms_port_fbdf and ms_port_ffdf;
 
 ----------------Z80-Synchronization---------------------
 process(f14)
@@ -355,10 +418,10 @@ drive_oe <= spi_iorqge or profi_ebl or nemo_ebl;
 floppy_oe <= not csff and cswg;
 sound_oe <= fon and not CHAN_A and not CHAN_B and not CHAN_C and not CHAN_D and CSFFFD and saa_cs and port_fffc_cs;
 
-t_ap6 <= (rd or not wr or not m1_z) and FI and cache_rd;
-csap6 <= not SEL and not drive_oe and floppy_oe and sound_oe and vv55_cs and vi53_cs and vv51_cs and P4I and FI and port_dffd and cache_en and cache_cs;
+t_ap6 <= (rd or not wr or not m1_z) and FI and cache_rd and ms_port;
+csap6 <= not drive_oe and floppy_oe and sound_oe and vv55_cs and vi53_cs and vv51_cs and P4I and FI and port_dffd and cache_en and cache_cs and ms_port; --not SEL and 
 oe_ap6 <= csap6 and m1_z; 
-t_lvc245 <= (rd or not wr or not m1_z or (not spi_iorqge and not csff)) and FI;
+t_lvc245 <= (rd or not wr or not m1_z or (not spi_iorqge and not csff)) and FI and ms_port;
 
 ----------------VV55------------------------
 RT_F5 <='0' when adress(7)='0' and adress(1 downto 0)="11" and iorq='0' and CPM='1' and dos='1' else '1';
@@ -393,9 +456,9 @@ process(f14, wr, cache_en, cache_rd)
     end process;
 
 ----------------Serial port------------------------
--- одновибратор - по спаду iorq отсчитывает 400ns WAIT проца
--- для работоспособности периферии в турбе или в режиме 
--- расширенного экрана при подключении третьего кварца XМГц
+-- ������������ - �� ����� iorq ����������� 400ns WAIT �����
+-- ��� ����������������� ��������� � ����� ��� � ������ 
+-- ������������ ������ ��� ����������� �������� ������ X���
 
 WAIT_IO <= WAIT_C(2) and WAIT_C(1);
 WAIT_C_stop <= WAIT_C(2) and WAIT_C(1) and not WAIT_C(0);
@@ -451,11 +514,11 @@ RWE <='0' when wr='1' and adress(7 downto 0)="11101011" and iorq='0' and CPM='0'
 CS3FX <='0' when wr='0' and adress(7 downto 0)="10101011" and iorq='0' and CPM='0' and dos='1' and rom14='1' else '1';
 CS1FX <= RWW and WWE;
 	-- Nemo
-nemo_ebl<= '1' when adress (2 downto 1)="00" and m1='1' and iorq='0' and cpm='1' and iorqge_mc='0' else '0';
-IOW <='0' when adress(2 downto 0)="000" and m1='1' and iorq='0' and cpm='1' and iorqge_mc='0' and rd='1' and wr='0' else '1';
-WRH <='0' when adress(2 downto 0)="001" and m1='1' and iorq='0' and cpm='1' and iorqge_mc='0' and rd='1' and wr='0' else '1';
-IOR <='0' when adress(2 downto 0)="000" and m1='1' and iorq='0' and cpm='1' and iorqge_mc='0' and rd='0' and wr='1' else '1';
-RDH <='0' when adress(2 downto 0)="001" and m1='1' and iorq='0' and cpm='1' and iorqge_mc='0' and rd='0' and wr='1' else '1';
+nemo_ebl<= '1' when adress (2 downto 1)="00" and m1='1' and iorq='0' and cpm='1' else '0'; -- and iorqge_mc='0'
+IOW <='0' when adress(2 downto 0)="000" and m1='1' and iorq='0' and cpm='1' and rd='1' and wr='0' else '1'; -- and iorqge_mc='0'
+WRH <='0' when adress(2 downto 0)="001" and m1='1' and iorq='0' and cpm='1' and rd='1' and wr='0' else '1'; --  and iorqge_mc='0'
+IOR <='0' when adress(2 downto 0)="000" and m1='1' and iorq='0' and cpm='1' and rd='0' and wr='1' else '1'; --  and iorqge_mc='0'
+RDH <='0' when adress(2 downto 0)="001" and m1='1' and iorq='0' and cpm='1' and rd='0' and wr='1' else '1'; --  and iorqge_mc='0'
 nemo_cs0<= adress(3) when nemo_ebl='1' else '1';
 nemo_cs1<= adress(4) when nemo_ebl='1' else '1';
 nemo_ior<= ior when nemo_ebl='1' else '1';
@@ -495,10 +558,11 @@ begin
 	end if;
 end process;
 
-w_a_i_t <= not wait_mc and WAIT_IO_s and mag;
+w_a_i_t <= WAIT_IO_s and mag; --not wait_mc and 
+--reset <= res;
 res <= reset;
 
--------------------------некоторые сигналы---------------------
+-------------------------��������� �������---------------------
 pzu <= adress(15) or adress(14);
 mem <= m1 or mrq;
 dos_on <= '1' when (adress(15 downto 8) = "00111101" and mem = '0' and rom14 = '1') or (mag = '0') else '0';
@@ -524,24 +588,24 @@ mag <= '0' when magik='0' and mem='0' and pzu='1' and cpm='1' else '1';
 nmi <= mag;
 
 -- Profi RTC
-portAS <= '1' when adress(9)='0' and adress(7)='1' and adress(5)='1' and adress(3 downto 0)=X"F" and iorq='0' and cpm='0' and rom14='1' else '0';
-portDS <= '1' when adress(9)='0' and adress(7)='1' and adress(5)='0' and adress(3 downto 0)=X"F" and iorq='0' and cpm='0' and rom14='1' else '0';
+--portAS <= '1' when adress(9)='0' and adress(7)='1' and adress(5)='1' and adress(3 downto 0)=X"F" and iorq='0' and cpm='0' and rom14='1' else '0';
+--portDS <= '1' when adress(9)='0' and adress(7)='1' and adress(5)='0' and adress(3 downto 0)=X"F" and iorq='0' and cpm='0' and rom14='1' else '0';
 
 --------------------MEGA------------------------------------
-p_sel <= adress(7) and adress(6) and  adress(2) and  adress(1) and not iorq and m1;
-portFE <= not adress(0) and adress(3) and adress(4) and  adress(5) and p_sel;
-portF7 <= adress(0) and not adress(3) and  adress(4) and adress(5) and p_sel;
-portEF <= adress(0) and adress(3) and not adress(4) and adress(5) and p_sel; 
-portDF <= adress(0) and  adress(3) and  adress(4) and not adress(5) and adress(9) and p_sel;
-ports1 <= portF7 or portEF or portDF or portAS or portDS;
-INT0 <= not portFE;
-INT1 <= not ports1;
-SEL <= not INT0I or ports1;
-wait_mc <=  READY_n and SEL;
-ADR0 <= adress(5);
-ADR1 <= adress(4);
-iorqge_mc <= wr and  SEL;
-
+--p_sel <= adress(7) and adress(6) and  adress(2) and  adress(1) and not iorq and m1;
+--portFE <= not adress(0) and adress(3) and adress(4) and  adress(5) and p_sel;
+--portF7 <= adress(0) and not adress(3) and  adress(4) and adress(5) and p_sel;
+--portEF <= adress(0) and adress(3) and not adress(4) and adress(5) and p_sel; 
+--portDF <= adress(0) and  adress(3) and  adress(4) and not adress(5) and adress(9) and p_sel;
+--ports1 <= portF7 or portEF or portDF or portAS or portDS;
+--INT0 <= not portFE;
+--INT1 <= not ports1;
+--SEL <= not INT0I or ports1;
+--wait_mc <=  READY_n and SEL;
+--ADR0 <= adress(5);
+--ADR1 <= adress(4);
+--iorqge_mc <= wr and  SEL;
+int1 <= ms_present;
 ----------------port ff to WG93------------------------------
 process(f14,pff,Data,wr,csff,res)
 begin 
@@ -559,9 +623,9 @@ side1 <= not pff(4);
 hlt <= pff(3);
 rst <= pff(2);
 
-process(dos_of,dos_on,f14,reset)
+process(dos_of,dos_on,f14,res)
 begin
-if reset='0' then
+if res='0' then
 	dos <= '0';
 	elsif ( f14'event and f14='1') then
 		if dos_of='0' then
@@ -576,15 +640,15 @@ end process;
 -----------------FAPCH------------------------------------------------------
 process(f8,f)
 begin
-if (f8'event and f8='0') then------Делитель 8->4->1 мц
+if (f8'event and f8='0') then------�������� 8->4->1 ��
 	f <= f+1;
 end if;
 end process;	
 
-f4 <= f(0);---------частота предкомпенсации записи
-wg_clk <= f(2);-----частота на ВГ93 (1Мц)	
+f4 <= f(0);---------������� ��������������� ������
+wg_clk <= f(2);-----������� �� ��93 (1��)	
 
-------------------------------Формирование RAWR 125 мс-------------------------------------------------------------
+------------------------------������������ RAWR 125 ��-------------------------------------------------------------
 process(f8,rdat,rd1)
 begin
 if (f8'event and f8='1') then
@@ -598,9 +662,9 @@ if (f8'event and f8='1') then
 	rd2 <= not rd1;
 end if;
 end process;
-rawr <= '0' when wf_de='0' and (rd1='1' and rd2='1') else '1';-- RAWR сформирован, при WF_DE - '1' - запрет на выход
+rawr <= '0' when wf_de='0' and (rd1='1' and rd2='1') else '1';-- RAWR �����������, ��� WF_DE - '1' - ������ �� �����
 
------------------Собственно ФАПЧ (расчёт сдвигов RCLK)-------------------------------------------------------------
+-----------------���������� ���� (������ ������� RCLK)-------------------------------------------------------------
 process(f8,rawr,fa)
 begin
 if (f8'event and f8='1') then
@@ -628,14 +692,14 @@ end process;
 
 process(f8,rclk,wf_de,fa)
 	begin
-		if wf_de='0' then--Запрет, RCLK если нет обращения к дисководу (тоже самое и для RAWR)
+		if wf_de='0' then--������, RCLK ���� ��� ��������� � ��������� (���� ����� � ��� RAWR)
 			rclk <= not fa(4);
 		else 
 			rclk <= '1';
 		end if;
 end process;
 
-----------------Предкомпенсация записи---------------------------------------------
+----------------��������������� ������---------------------------------------------
 wdat <= wdata(3);
 process(f4,wd,tr43,sr,sl)
 begin
@@ -657,7 +721,7 @@ end process;
 ---------------------AY-----------------------
 process(f14, freq)
 	begin
-		if (f14'event and f14='0') then --Делитель 14->7->3,5->1,75МГц
+		if (f14'event and f14='0') then --�������� 14->7->3,5->1,75���
 			freq <= freq+1;
 	end if;
 end process;
@@ -696,7 +760,7 @@ end process;
 
 port_fffc_cs <='0' when adress(15 downto 0)=X"fffc" and iorqge='0' and iorq='0' and m1='1' else '1';
 
-process(f14,res,port_fffc_cs,Data,wr) -- порт FFFC
+process(f14,res,port_fffc_cs,Data,wr) -- ���� FFFC
 begin
 	if (res='0') then
 		port_fffc <= "00000000";
@@ -708,23 +772,23 @@ end process;
 process (port_fffc, ay_clk_ext, freq, dffd_80ds)
 begin
 	if port_fffc(0)='1' or dffd_80ds='1' then
-		ay_clk <= ay_clk_ext; -- альтернативная частота музпроцессора
+		ay_clk <= ay_clk_ext; -- �������������� ������� �������������
 	else
-		ay_clk <= freq(2); -- 1,75МГц
+		ay_clk <= freq(2); -- 1,75���
 	end if;
 end process;
 
 process (port_fffc, ay_clk_ext, f)
 begin
 	if port_fffc(1)='1' then
-		ay_clk_ext <= f(1); -- 2МГц
+		ay_clk_ext <= f(1); -- 2���
 	else
-		ay_clk_ext <= f(2); -- 1МГц
+		ay_clk_ext <= f(2); -- 1���
 	end if;
 end process;
 
 -----------------SAA------------------------
-CSFFFD <= '0' when adress(15 downto 0)=X"fffd" and mrq='1' and iorq='0' and m1='1' and nemo_ebl='0' and profi_ebl='0' and spi_iorqge='0' and iorqge_mc='0' else '1';
+CSFFFD <= '0' when adress(15 downto 0)=X"fffd" and mrq='1' and iorq='0' and m1='1' and nemo_ebl='0' and profi_ebl='0' and spi_iorqge='0' else '1'; --and iorqge_mc='0' 
 saa_sel <= '0' when Data(7 downto 4)="1111" and Data(2 downto 0)="110" and wr='0' and CSFFFD='0' else '1';
 
 process(f14,saa_bit,res,csts,saa_sel,Data)
@@ -750,22 +814,22 @@ dac1_cs <= '0' when (CHAN_A='1' or CHAN_B='1') and rd='1' and wr='0' else '1';
 dac <= '0' when CHAN_A = '1' or CHAN_C = '1' else '1';
 
 ---------------------------------------------Cmos--------------------------------------------
-cseff7<='1' when (adress=61431 and wr='0' and iorq = '0' and m1 = '1') else '0';
-
-process(res,cseff7,f14,peff7)
-begin
-if (res = '0') then
-	peff7 <= "00000000";
-	elsif (f14'event and f14 = '1') then
-		if cseff7 = '1' then
-		peff7 <= Data;
-		end if;
-end if;
-end process;
+--cseff7<='1' when (adress=61431 and wr='0' and iorq = '0' and m1 = '1') else '0';
+--
+--process(res,cseff7,f14,peff7)
+--begin
+--if (res = '0') then
+--	peff7 <= "00000000";
+--	elsif (f14'event and f14 = '1') then
+--		if cseff7 = '1' then
+--		peff7 <= Data;
+--		end if;
+--end if;
+--end process;
 
 ------------------------DATA-----------------------------
 
-process(f14,Data,csff,z_data,rd,wr,iorq,intr,drq,adress,cpm,timer,fi,rxrdt,txrdt,ri,dcd,p4i)
+process(f14,Data,csff,z_data,rd,wr,iorq,intr,drq,adress,cpm,timer,fi,rxrdt,txrdt,ri,dcd,p4i,ms_present,ms_left,ms_x_bus,ms_y_bus)--,kb_do_bus,port_fe_sel)
 begin
 if csff='1' and rd='0' and wr='1' then
 		Data(7 downto 0) <= intr & drq & "111111";
@@ -783,6 +847,16 @@ if csff='1' and rd='0' and wr='1' then
 --		Data <= "11111110";
 --	elsif DCD='1' and P4I='0' and rd='0' and wr='1' then
 --		Data <= "01111111";
+--	elsif port_fe_sel = '1' then
+--		data <= "111" & kb_do_bus;
+	elsif	(iorq = '0' and rd = '0' and adress(15 downto 0) = "1111101011011111" and ms_present = '1' and ms_left = '0') then -- Mouse Port FADF[11111010_11011111] = <Z>1<MB><LB><RB>
+		data <= ms_but_bus(7 downto 4) & '1' & not(ms_but_bus(2) & ms_but_bus(0) & ms_but_bus(1));
+	elsif	(iorq = '0' and rd = '0' and adress(15 downto 0) = "1111101011011111" and ms_present = '1' and ms_left = '1') then
+		data <= ms_but_bus(7 downto 4) & '1' & not(ms_but_bus(2) & ms_but_bus(1) & ms_but_bus(0));
+	elsif	(iorq = '0' and rd = '0' and adress(15 downto 0) = "1111101111011111" and ms_present = '1') then
+		data <= ms_x_bus;	-- Port FBDF[11111011_11011111] = <X>
+	elsif (iorq = '0' and rd = '0' and adress(15 downto 0) = "1111111111011111" and ms_present = '1') then
+		data <= ms_y_bus;  -- Port FFDF[11111111_11011111] = <Y>
 	else
 		Data <= "ZZZZZZZZ"; 
 end if; 
@@ -817,5 +891,49 @@ port map(
 	SCK     		=> SD_CLK,
 	MOSI    		=> SD_DI
 );
+--zxkey:zxkbd        
+--port map(
+--	clk				=> f14,
+--	reset           => '0',
+--	res_k           => res,
+--	ps2_clk         => PS2_KBCLK,
+--	ps2_data        => PS2_KBDAT,
+--	zx_kb_scan      => kb_a_bus,
+--	zx_kb_out       => kb_do_bus,
+--	k_joy			=> open,
+--	f				=> open,
+--	num_joy			=> open
+--);
+
+--zxkey:PS2_KEYB        
+--port map(
+--		a		=> kb_a_bus,
+--		res_n	=> res,
+--		clk		=> f14,
+--		kbd_clk	=> PS2_KBCLK,
+--		kbd_dat	=> PS2_KBDAT,
+--		key_row	=> kb_do_bus
+--);
+
+-- PS/2 Mouse Controller
+U6: entity work.mouse
+generic map (
+	-- This allows the use of the scroll-wheel on mice that have them.
+	intelliMouseSupport => true,	-- Enable support for intelli-mouse mode.
+	clockFilter 		=> 15,		-- Number of system-cycles used for PS/2 clock filtering
+	ticksPerUsec		=> 28)		-- Timer calibration 28Mhz clock
+port map (
+	clk				=> f14,
+	reset			=> not res,
+	ps2_clk			=> PS2_MSCLK,
+	ps2_dat		 	=> PS2_MSDAT,
+	mousePresent 	=> ms_present,
+	leftButton 		=> ms_but_bus(1),
+	middleButton 	=> ms_but_bus(2),
+	rightButton 	=> ms_but_bus(0),
+	X 				=> ms_x_bus,
+	Y 				=> ms_y_bus,
+	Z				=> ms_but_bus(7 downto 4));	
+
 
 end extend_arch;

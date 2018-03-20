@@ -41,12 +41,11 @@ set_global_assignment -name DEVICE EPM570T144C5
 set_global_assignment -name TOP_LEVEL_ENTITY extend
 set_global_assignment -name ORIGINAL_QUARTUS_VERSION 9.1
 set_global_assignment -name PROJECT_CREATION_TIME_DATE "16:20:46  AUGUST 09, 2012"
-set_global_assignment -name LAST_QUARTUS_VERSION "9.1 SP2"
+set_global_assignment -name LAST_QUARTUS_VERSION "13.0 SP1"
 set_global_assignment -name USE_GENERATED_PHYSICAL_CONSTRAINTS OFF -section_id eda_blast_fpga
 set_global_assignment -name DEVICE_FILTER_PACKAGE TQFP
 set_global_assignment -name DEVICE_FILTER_PIN_COUNT 144
 set_global_assignment -name DEVICE_FILTER_SPEED_GRADE 5
-set_global_assignment -name MISC_FILE "C:/Documents and Settings/Андрей/Рабочий стол/ Robik extend/extend.dpf"
 set_global_assignment -name MAX7000_DEVICE_IO_STANDARD "3.3-V LVTTL"
 set_location_assignment PIN_2 -to reset
 set_location_assignment PIN_98 -to nmi
@@ -77,20 +76,9 @@ set_location_assignment PIN_91 -to magik
 set_location_assignment PIN_86 -to f8
 set_location_assignment PIN_130 -to SD_CLK
 set_location_assignment PIN_95 -to w_a_i_t
-set_global_assignment -name MISC_FILE "C:/Documents and Settings/Андрей/Рабочий стол/Копия  Robik extend/extend.dpf"
-set_global_assignment -name MISC_FILE "E:/Projects/Robik Extend/extend.dpf"
 set_global_assignment -name SYNTH_TIMING_DRIVEN_SYNTHESIS OFF
 set_global_assignment -name OPTIMIZE_HOLD_TIMING OFF
 set_global_assignment -name FITTER_EFFORT "STANDARD FIT"
-set_global_assignment -name VHDL_FILE SPI.vhd
-set_global_assignment -name VHDL_FILE extend.vhd
-set_global_assignment -name VECTOR_WAVEFORM_FILE extend.vwf
-set_global_assignment -name MISC_FILE "C:/Documents and Settings/Андрей/Рабочий стол/Robik Extend/extend.dpf"
-set_global_assignment -name MISC_FILE "C:/Documents and Settings/Андрей/Рабочий стол/Копия Robik Extend/extend.dpf"
-set_global_assignment -name MISC_FILE "C:/Documents and Settings/Андрей/Рабочий стол/Robik Extend 1.03/extend.dpf"
-set_global_assignment -name MISC_FILE "D:/Altera/Проэкт/Robik/Robik Extend/Robik Extend 1.03/extend.dpf"
-set_global_assignment -name MISC_FILE "D:/Altera/Проэкт/черновики/Robik Extend 1.03/extend.dpf"
-set_global_assignment -name MISC_FILE "D:/Altera/Проэкт/черновики/Robik Extend 1.04/extend.dpf"
 set_location_assignment PIN_31 -to Data[0]
 set_location_assignment PIN_30 -to Data[1]
 set_location_assignment PIN_29 -to Data[2]
@@ -116,8 +104,6 @@ set_location_assignment PIN_16 -to adress[13]
 set_location_assignment PIN_18 -to adress[14]
 set_location_assignment PIN_20 -to adress[15]
 set_location_assignment PIN_97 -to iorqge
-set_global_assignment -name MISC_FILE "D:/Altera/Проэкт/черновики/Robik Extend 1.05/extend.dpf"
-set_global_assignment -name MISC_FILE "D:/Altera/Проэкт/черновики/Robik Extend V 2.00/extend.dpf"
 set_global_assignment -name MIN_CORE_JUNCTION_TEMP 0
 set_global_assignment -name MAX_CORE_JUNCTION_TEMP 85
 set_global_assignment -name POWER_EXT_SUPPLY_VOLTAGE_TO_REGULATOR 3.3V
@@ -125,7 +111,6 @@ set_global_assignment -name INCREMENTAL_COMPILATION OFF
 set_global_assignment -name LL_ROOT_REGION ON -section_id "Root Region"
 set_global_assignment -name LL_MEMBER_STATE LOCKED -section_id "Root Region"
 set_global_assignment -name STRATIX_DEVICE_IO_STANDARD "3.3-V LVTTL"
-set_global_assignment -name MISC_FILE "G:/Profi/Profi_v5.06/Profiv5.06_UP/CPLD/Robik Extend V 2.75/extend.dpf"
 set_location_assignment PIN_6 -to rom14
 set_location_assignment PIN_1 -to cpm
 set_location_assignment PIN_21 -to t_ap6
@@ -150,13 +135,6 @@ set_location_assignment PIN_62 -to txrdt
 set_location_assignment PIN_87 -to timer
 set_location_assignment PIN_93 -to ri
 set_location_assignment PIN_94 -to dcd
-set_location_assignment PIN_88 -to INT0I
-set_location_assignment PIN_89 -to READY_n
-set_location_assignment PIN_101 -to INT1
-set_location_assignment PIN_102 -to ADR0
-set_location_assignment PIN_103 -to ADR1
-set_location_assignment PIN_104 -to SEL
-set_location_assignment PIN_105 -to INT0
 set_location_assignment PIN_96 -to int
 set_location_assignment PIN_106 -to hdd_a0
 set_location_assignment PIN_107 -to hdd_a1
@@ -182,13 +160,19 @@ set_location_assignment PIN_4 -to rd_z
 set_location_assignment PIN_7 -to mrq_z
 set_location_assignment PIN_5 -to iorq_z
 set_location_assignment PIN_140 -to m1_z
-set_global_assignment -name MISC_FILE "G:/Profi/Profi_v5.06/Profiv5.06_UP/CPLD/Profi Extend V 2.75/extend.dpf"
-set_global_assignment -name MISC_FILE "G:/Profi/Profi_v5.06/Profiv5.06_UP/CPLD/TEMP/Profi Extend V 2.75/extend.dpf"
 set_location_assignment PIN_124 -to iorqge_sl
 set_location_assignment PIN_51 -to cache_oe
-set_global_assignment -name MISC_FILE "G:/Profi/Profi_v5.06/Profiv5.06_UP/CPLD/Profi_up_epm570_src/extend.dpf"
-set_global_assignment -name MISC_FILE "G:/Profi/Profi_v5.06/Profiv5.06_UP/CPLD/Profi_up_epm570_src(1)/extend.dpf"
 set_location_assignment PIN_122 -to ay_clk
-set_location_assignment PIN_125 -to ATM_PB3
-set_location_assignment PIN_123 -to ATM_PB4
-set_location_assignment PIN_121 -to cpld_121
+set_location_assignment PIN_125 -to PS2_KBCLK
+set_location_assignment PIN_123 -to PS2_KBDAT
+set_global_assignment -name VHDL_FILE mouse.vhd
+set_global_assignment -name VHDL_FILE io_ps2_com.vhd
+set_global_assignment -name VHDL_FILE io_ps2_mouse.vhd
+set_global_assignment -name VERILOG_FILE PS2_KEYB.v
+set_global_assignment -name VHDL_FILE SPI.vhd
+set_global_assignment -name VHDL_FILE extend.vhd
+set_global_assignment -name VECTOR_WAVEFORM_FILE extend.vwf
+set_location_assignment PIN_102 -to PS2_MSCLK
+set_location_assignment PIN_103 -to PS2_MSDAT
+set_location_assignment PIN_105 -to SEL
+set_location_assignment PIN_101 -to INT1
