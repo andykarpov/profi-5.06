@@ -11,13 +11,13 @@ use IEEE.numeric_std.ALL;
 entity extend is                    
 port(
 
-zx14mhz			:in std_logic; -- частота текущего тактового генератора 14 или ХМГц от Профи
-iorqge_sl		:in std_logic; -- IORQGE слота
-cpld_121		:out std_logic := 'Z'; -- тестовый сигнал выходящий на пин PLS для отладки
-f8				:in std_logic; -- частота 8 МГц для бетадиска
-turbo			:in std_logic; -- сигнал TURBO - 0=On, 1=Off
-c_dffd			:buffer std_logic; -- Клок порта DFFD c полной дешифрацией и корректировкой
-							-- порта FD, для старых нижних плат профи с неполной дешифрацией
+zx14mhz			:in std_logic; -- ������� �������� ��������� ���������� 14 ��� ���� �� �����
+iorqge_sl		:in std_logic; -- IORQGE �����
+--cpld_121		:out std_logic := 'Z'; -- �������� ������ ��������� �� ��� PLS ��� �������
+f8				:in std_logic; -- ������� 8 ��� ��� ���������
+turbo			:in std_logic; -- ������ TURBO - 0=On, 1=Off
+c_dffd			:buffer std_logic; -- ���� ����� DFFD c ������ ����������� � ��������������
+							-- ����� FD, ��� ������ ������ ���� ����� � �������� �����������
 
 ----------------Z80----------------------
 reset			:in std_logic;
@@ -43,12 +43,12 @@ bc1a			:out std_logic;
 bc1b			:out std_logic;
 bdira			:out std_logic;
 bdirb			:out std_logic;
-ay_clk			:out std_logic; -- альтернативный клок для музпроцессоров.
+ay_clk			:out std_logic; -- �������������� ���� ��� ��������������.
 
 -----------------DATA BUFFER------------------------
-t_ap6			:out std_logic; -- определяет направление буфера шины данных АП6
+t_ap6			:out std_logic; -- ���������� ����������� ������ ���� ������ ��6
 oe_ap6			:out std_logic; 
-t_lvc245		:out std_logic; -- определяет направление буфера шины данных LVC245
+t_lvc245		:out std_logic; -- ���������� ����������� ������ ���� ������ LVC245
 
 -----------------SAA------------------------
 saa_cs			:buffer std_logic;
@@ -69,7 +69,7 @@ cache_we		:out std_logic;
 cache_oe		:out std_logic;
 
 ----------------Serial port------------------------
-lwr				:out std_logic; -- WR для компорта
+lwr				:out std_logic; -- WR ��� ��������
 vi53_cs			:buffer std_logic;
 ladr5			:out std_logic;
 ladr6			:out std_logic;
@@ -77,11 +77,13 @@ vv51_cs			:buffer std_logic;
 int				:out std_logic;
 rxrdt			:in std_logic;
 txrdt			:in std_logic;
-timer			:in std_logic;
-ri				:in std_logic;
+--timer			:in std_logic;
+--ri				:in std_logic;
 dcd				:in std_logic;
 
 -----------------mega-----------------------
+KBUS          : out std_logic_vector(4 downto 0) := "11111";
+
 READY_n			:in std_logic;
 INT0I			:in std_logic;
 INT0			:out std_logic;
@@ -89,8 +91,8 @@ INT1			:out std_logic;
 ADR0			:out std_logic;
 ADR1			:out std_logic;
 SEL				:buffer std_logic;
-ATM_PB3			:out std_logic := 'Z'; -- сигнал для часов Profi
-ATM_PB4			:out std_logic := 'Z'; -- сигнал для часов Profi
+--ATM_PB3			:out std_logic := 'Z'; -- ������ ��� ����� Profi
+--ATM_PB4			:out std_logic := 'Z'; -- ������ ��� ����� Profi
 
 ---------------HDD------------------
 hdd_a0			:out std_logic;
@@ -154,12 +156,24 @@ COMPONENT SPI
         );
 END COMPONENT ;
 ---------------------------------------------------------------------------
+COMPONENT cpld_kbd               
+    port(
+        --INPUTS
+    A           : in std_logic_vector(15 downto 8);     -- address bus for kbd
+    AVR_CLK     : in std_logic;
+    AVR_RST     : in std_logic;
+    AVR_DATA    : in std_logic;
+			-- OUTPUTS
+	 KB          : out std_logic_vector(4 downto 0) := "11111"     -- data bus for kbd
+        );
+END COMPONENT ;
+---------------------------------------------------------------------------
 
 ----------------Z80----------------------
 signal res				:std_logic;
-signal wr				:std_logic; -- синхронный WR
-signal rd				:std_logic; -- синхронный RD
-signal iorq				:std_logic; -- синхронный iorq
+signal wr				:std_logic; -- ���������� WR
+signal rd				:std_logic; -- ���������� RD
+signal iorq				:std_logic; -- ���������� iorq
 signal m1				:std_logic;
 signal mrq				:std_logic;
 signal Data_reg			:std_logic_vector (7 downto 0);
@@ -393,9 +407,9 @@ process(f14, wr, cache_en, cache_rd)
     end process;
 
 ----------------Serial port------------------------
--- одновибратор - по спаду iorq отсчитывает 400ns WAIT проца
--- для работоспособности периферии в турбе или в режиме 
--- расширенного экрана при подключении третьего кварца XМГц
+-- ������������ - �� ����� iorq ����������� 400ns WAIT �����
+-- ��� ����������������� ��������� � ����� ��� � ������ 
+-- ������������ ������ ��� ����������� �������� ������ X���
 
 WAIT_IO <= WAIT_C(2) and WAIT_C(1);
 WAIT_C_stop <= WAIT_C(2) and WAIT_C(1) and not WAIT_C(0);
@@ -498,7 +512,7 @@ end process;
 w_a_i_t <= not wait_mc and WAIT_IO_s and mag;
 res <= reset;
 
--------------------------некоторые сигналы---------------------
+-------------------------��������� �������---------------------
 pzu <= adress(15) or adress(14);
 mem <= m1 or mrq;
 dos_on <= '1' when (adress(15 downto 8) = "00111101" and mem = '0' and rom14 = '1') or (mag = '0') else '0';
@@ -576,15 +590,15 @@ end process;
 -----------------FAPCH------------------------------------------------------
 process(f8,f)
 begin
-if (f8'event and f8='0') then------Делитель 8->4->1 мц
+if (f8'event and f8='0') then------�������� 8->4->1 ��
 	f <= f+1;
 end if;
 end process;	
 
-f4 <= f(0);---------частота предкомпенсации записи
-wg_clk <= f(2);-----частота на ВГ93 (1Мц)	
+f4 <= f(0);---------������� ��������������� ������
+wg_clk <= f(2);-----������� �� ��93 (1��)	
 
-------------------------------Формирование RAWR 125 мс-------------------------------------------------------------
+------------------------------������������ RAWR 125 ��-------------------------------------------------------------
 process(f8,rdat,rd1)
 begin
 if (f8'event and f8='1') then
@@ -598,9 +612,9 @@ if (f8'event and f8='1') then
 	rd2 <= not rd1;
 end if;
 end process;
-rawr <= '0' when wf_de='0' and (rd1='1' and rd2='1') else '1';-- RAWR сформирован, при WF_DE - '1' - запрет на выход
+rawr <= '0' when wf_de='0' and (rd1='1' and rd2='1') else '1';-- RAWR �����������, ��� WF_DE - '1' - ������ �� �����
 
------------------Собственно ФАПЧ (расчёт сдвигов RCLK)-------------------------------------------------------------
+-----------------���������� ���� (������ ������� RCLK)-------------------------------------------------------------
 process(f8,rawr,fa)
 begin
 if (f8'event and f8='1') then
@@ -628,14 +642,14 @@ end process;
 
 process(f8,rclk,wf_de,fa)
 	begin
-		if wf_de='0' then--Запрет, RCLK если нет обращения к дисководу (тоже самое и для RAWR)
+		if wf_de='0' then--������, RCLK ���� ��� ��������� � ��������� (���� ����� � ��� RAWR)
 			rclk <= not fa(4);
 		else 
 			rclk <= '1';
 		end if;
 end process;
 
-----------------Предкомпенсация записи---------------------------------------------
+----------------��������������� ������---------------------------------------------
 wdat <= wdata(3);
 process(f4,wd,tr43,sr,sl)
 begin
@@ -657,7 +671,7 @@ end process;
 ---------------------AY-----------------------
 process(f14, freq)
 	begin
-		if (f14'event and f14='0') then --Делитель 14->7->3,5->1,75МГц
+		if (f14'event and f14='0') then --�������� 14->7->3,5->1,75���
 			freq <= freq+1;
 	end if;
 end process;
@@ -696,7 +710,7 @@ end process;
 
 port_fffc_cs <='0' when adress(15 downto 0)=X"fffc" and iorqge='0' and iorq='0' and m1='1' else '1';
 
-process(f14,res,port_fffc_cs,Data,wr) -- порт FFFC
+process(f14,res,port_fffc_cs,Data,wr) -- ���� FFFC
 begin
 	if (res='0') then
 		port_fffc <= "00000000";
@@ -708,18 +722,18 @@ end process;
 process (port_fffc, ay_clk_ext, freq, dffd_80ds)
 begin
 	if port_fffc(0)='1' or dffd_80ds='1' then
-		ay_clk <= ay_clk_ext; -- альтернативная частота музпроцессора
+		ay_clk <= ay_clk_ext; -- �������������� ������� �������������
 	else
-		ay_clk <= freq(2); -- 1,75МГц
+		ay_clk <= freq(2); -- 1,75���
 	end if;
 end process;
 
 process (port_fffc, ay_clk_ext, f)
 begin
 	if port_fffc(1)='1' then
-		ay_clk_ext <= f(1); -- 2МГц
+		ay_clk_ext <= f(1); -- 2���
 	else
-		ay_clk_ext <= f(2); -- 1МГц
+		ay_clk_ext <= f(2); -- 1���
 	end if;
 end process;
 
@@ -765,7 +779,7 @@ end process;
 
 ------------------------DATA-----------------------------
 
-process(f14,Data,csff,z_data,rd,wr,iorq,intr,drq,adress,cpm,timer,fi,rxrdt,txrdt,ri,dcd,p4i)
+process(f14,Data,csff,z_data,rd,wr,iorq,intr,drq,adress,cpm,fi,rxrdt,txrdt,p4i)
 begin
 if csff='1' and rd='0' and wr='1' then
 		Data(7 downto 0) <= intr & drq & "111111";
@@ -816,6 +830,17 @@ port map(
 	DO				=> z_data,
 	SCK     		=> SD_CLK,
 	MOSI    		=> SD_DI
+);
+
+PS2_KBD: cpld_kbd
+PORT MAP (
+        --INPUTS
+    A => Adress(15 downto 8), -- address bus for kbd
+    AVR_CLK => f14,
+    AVR_RST => reset,
+    AVR_DATA => Data(0),
+			-- OUTPUTS
+	 KB => kbus
 );
 
 end extend_arch;
