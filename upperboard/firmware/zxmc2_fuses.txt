@@ -1,0 +1,32 @@
+Fuse Low Byte:
+[ ] BODLEVEL=0
+[ ] BODEN=0
+[x] SUT1=0
+[ ] SUT0=0
+[ ] CKSEL3=0
+[ ] CKSEL2=0
+[ ] CKSEL1=0
+[ ] CKSEL0=0
+
+Fuse High Byte:
+[ ] S8515C=0
+[ ] WDTON=0
+[x] SPIEN=0
+[ ] CKOPT=0
+[ ] EESAVE=0
+[ ] BOOTSZ1=0
+[x] BOOTSZ0=0
+[ ] BOOTRST=0
+
+Lock Bit Byte:
+[ ] BLB12=0
+[ ] BLB11=0
+[ ] BLB02=0
+[ ] BLB01=0
+[ ] LB2=0
+[ ] LB1=0
+
+Fuse Low Byte: 0xDF
+Fuse High Byte: 0xDD
+Lock Bit Byte: 0xFF
+
