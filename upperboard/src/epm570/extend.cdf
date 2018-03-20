@@ -4,7 +4,7 @@ JedecChain;
 	DefaultMfr(6E);
 
 	P ActionCode(Cfg)
-		Device PartName(EPM570T144) Path("G:/Profi/Profi_v5.06/Profiv5.06_UP/CPLD/Profi_up_epm570_src/") File("extend.pof") MfrSpec(OpMask(7) SEC_Device(EPM570T144) Child_OpMask(2 0 0));
+		Device PartName(EPM570T144) Path("G:/Profi/Profi_v5.06/Profiv5.06_UP/CPLD/beta/Profi_up_epm570_src(1)/") File("extend.pof") MfrSpec(OpMask(7) SEC_Device(EPM570T144) Child_OpMask(2 0 0));
 
 ChainEnd;
 
