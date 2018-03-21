@@ -11,15 +11,6 @@ use IEEE.numeric_std.ALL;
 entity extend is                    
 port(
 
-<<<<<<< HEAD
-zx14mhz			:in std_logic; -- ������� �������� ��������� ���������� 14 ��� ���� �� �����
-iorqge_sl		:in std_logic; -- IORQGE �����
---cpld_121		:out std_logic := 'Z'; -- �������� ������ ��������� �� ��� PLS ��� �������
-f8				:in std_logic; -- ������� 8 ��� ��� ���������
-turbo			:in std_logic; -- ������ TURBO - 0=On, 1=Off
-c_dffd			:buffer std_logic; -- ���� ����� DFFD c ������ ����������� � ��������������
-							-- ����� FD, ��� ������ ������ ���� ����� � �������� �����������
-=======
 zx14mhz			:in std_logic; -- chastota tekushhego taktovogo generatora 14 ili HMGc ot Profi
 iorqge_sl		:in std_logic; -- IORQGE slota
 cpld_121			:out std_logic := 'Z'; -- testovyj signal vyhodjashhij na pin PLS dlja otladki
@@ -27,8 +18,6 @@ f8					:in std_logic; -- chastota 8 MGc dlja betadiska
 turbo				:in std_logic; -- signal TURBO - 0=On, 1=Off
 c_dffd			:buffer std_logic; -- Klok porta DFFD c polnoj deshifraciej i korrektirovkoj
 							-- porta FD, dlja staryh nizhnih plat profi s nepolnoj deshifraciej
->>>>>>> nomega
-
 ----------------Z80----------------------
 reset				:in std_logic;
 wr_z				:in std_logic;
@@ -49,18 +38,6 @@ SD_CS				:out std_logic;
 SD_DI				:out std_logic;
 
 -----------------AY------------------------
-<<<<<<< HEAD
-bc1a			:out std_logic;
-bc1b			:out std_logic;
-bdira			:out std_logic;
-bdirb			:out std_logic;
-ay_clk			:out std_logic; -- �������������� ���� ��� ��������������.
-
------------------DATA BUFFER------------------------
-t_ap6			:out std_logic; -- ���������� ����������� ������ ���� ������ ��6
-oe_ap6			:out std_logic; 
-t_lvc245		:out std_logic; -- ���������� ����������� ������ ���� ������ LVC245
-=======
 bc1a				:out std_logic;
 bc1b				:out std_logic;
 bdira				:out std_logic;
@@ -71,7 +48,6 @@ ay_clk			:out std_logic; -- al'ternativnyj klok dlja muzprocessorov.
 t_ap6				:out std_logic; -- opredeljaet napravlenie bufera shiny dannyh AP6
 oe_ap6			:out std_logic; 
 t_lvc245			:out std_logic; -- opredeljaet napravlenie bufera shiny dannyh LVC245
->>>>>>> nomega
 
 -----------------SAA------------------------
 saa_cs			:buffer std_logic;
@@ -92,36 +68,12 @@ cache_we			:out std_logic;
 cache_oe			:out std_logic;
 
 ----------------Serial port------------------------
-<<<<<<< HEAD
-lwr				:out std_logic; -- WR ��� ��������
-=======
 lwr				:out std_logic; -- WR dlja komporta
->>>>>>> nomega
 vi53_cs			:buffer std_logic;
 ladr5				:out std_logic;
 ladr6				:out std_logic;
 vv51_cs			:buffer std_logic;
 int				:out std_logic;
-<<<<<<< HEAD
-rxrdt			:in std_logic;
-txrdt			:in std_logic;
---timer			:in std_logic;
---ri				:in std_logic;
-dcd				:in std_logic;
-
------------------mega-----------------------
-KBUS          : out std_logic_vector(4 downto 0) := "11111";
-
-READY_n			:in std_logic;
-INT0I			:in std_logic;
-INT0			:out std_logic;
-INT1			:out std_logic;
-ADR0			:out std_logic;
-ADR1			:out std_logic;
-SEL				:buffer std_logic;
---ATM_PB3			:out std_logic := 'Z'; -- ������ ��� ����� Profi
---ATM_PB4			:out std_logic := 'Z'; -- ������ ��� ����� Profi
-=======
 rxrdt				:in std_logic;
 txrdt				:in std_logic;
 timer				:in std_logic;
@@ -138,7 +90,6 @@ dcd				:in std_logic;
 --SEL				:buffer std_logic;
 --ATM_PB3		:out std_logic := 'Z'; -- signal dlja chasov Profi
 --ATM_PB4		:out std_logic := 'Z'; -- signal dlja chasov Profi
->>>>>>> nomega
 
 ---------------HDD------------------
 hdd_a0			:out std_logic;
@@ -217,15 +168,9 @@ END COMPONENT ;
 
 ----------------Z80----------------------
 signal res				:std_logic;
-<<<<<<< HEAD
-signal wr				:std_logic; -- ���������� WR
-signal rd				:std_logic; -- ���������� RD
-signal iorq				:std_logic; -- ���������� iorq
-=======
 signal wr				:std_logic; -- sinhronnyj WR
 signal rd				:std_logic; -- sinhronnyj RD
 signal iorq				:std_logic; -- sinhronnyj iorq
->>>>>>> nomega
 signal m1				:std_logic;
 signal mrq				:std_logic;
 signal Data_reg		:std_logic_vector (7 downto 0);
@@ -478,15 +423,9 @@ process(f14, wr, cache_en, cache_rd)
     end process;
 
 ----------------Serial port------------------------
-<<<<<<< HEAD
--- ������������ - �� ����� iorq ����������� 400ns WAIT �����
--- ��� ����������������� ��������� � ����� ��� � ������ 
--- ������������ ������ ��� ����������� �������� ������ X���
-=======
 -- odnovibrator - po spadu iorq otschityvaet 400ns WAIT proca
 -- dlja rabotosposobnosti periferii v turbe ili v rezhime 
 -- rasshirennogo jekrana pri podkljuchenii tret'ego kvarca XMGc
->>>>>>> nomega
 
 WAIT_IO <= WAIT_C(2) and WAIT_C(1);
 WAIT_C_stop <= WAIT_C(2) and WAIT_C(1) and not WAIT_C(0);
@@ -589,11 +528,7 @@ end process;
 w_a_i_t <= WAIT_IO_s and mag;
 res <= reset;
 
-<<<<<<< HEAD
--------------------------��������� �������---------------------
-=======
 -------------------------nekotorye signaly---------------------
->>>>>>> nomega
 pzu <= adress(15) or adress(14);
 mem <= m1 or mrq;
 dos_on <= '1' when (adress(15 downto 8) = "00111101" and mem = '0' and rom14 = '1') or (mag = '0') else '0';
@@ -656,26 +591,15 @@ end process;
 -----------------FAPCH------------------------------------------------------
 process(f8,f)
 begin
-<<<<<<< HEAD
-if (f8'event and f8='0') then------�������� 8->4->1 ��
-=======
 if (f8'event and f8='0') then------Delitel' 8->4->1 mc
->>>>>>> nomega
 	f <= f+1;
 end if;
 end process;	
 
-<<<<<<< HEAD
-f4 <= f(0);---------������� ��������������� ������
-wg_clk <= f(2);-----������� �� ��93 (1��)	
-
-------------------------------������������ RAWR 125 ��-------------------------------------------------------------
-=======
 f4 <= f(0);---------chastota predkompensacii zapisi
 wg_clk <= f(2);-----chastota na VG93 (1Mc)	
 
 ------------------------------Formirovanie RAWR 125 ms-------------------------------------------------------------
->>>>>>> nomega
 process(f8,rdat,rd1)
 begin
 if (f8'event and f8='1') then
@@ -689,15 +613,9 @@ if (f8'event and f8='1') then
 	rd2 <= not rd1;
 end if;
 end process;
-<<<<<<< HEAD
-rawr <= '0' when wf_de='0' and (rd1='1' and rd2='1') else '1';-- RAWR �����������, ��� WF_DE - '1' - ������ �� �����
-
------------------���������� ���� (������ ������� RCLK)-------------------------------------------------------------
-=======
 rawr <= '0' when wf_de='0' and (rd1='1' and rd2='1') else '1';-- RAWR sformirovan, pri WF_DE - '1' - zapret na vyhod
 
 -----------------Sobstvenno FAPCh (raschjot sdvigov RCLK)-------------------------------------------------------------
->>>>>>> nomega
 process(f8,rawr,fa)
 begin
 if (f8'event and f8='1') then
@@ -725,22 +643,14 @@ end process;
 
 process(f8,rclk,wf_de,fa)
 	begin
-<<<<<<< HEAD
-		if wf_de='0' then--������, RCLK ���� ��� ��������� � ��������� (���� ����� � ��� RAWR)
-=======
 		if wf_de='0' then--Zapret, RCLK esli net obrashhenija k diskovodu (tozhe samoe i dlja RAWR)
->>>>>>> nomega
 			rclk <= not fa(4);
 		else 
 			rclk <= '1';
 		end if;
 end process;
 
-<<<<<<< HEAD
-----------------��������������� ������---------------------------------------------
-=======
 ----------------Predkompensacija zapisi---------------------------------------------
->>>>>>> nomega
 wdat <= wdata(3);
 process(f4,wd,tr43,sr,sl)
 begin
@@ -762,11 +672,7 @@ end process;
 ---------------------AY-----------------------
 process(f14, freq)
 	begin
-<<<<<<< HEAD
-		if (f14'event and f14='0') then --�������� 14->7->3,5->1,75���
-=======
 		if (f14'event and f14='0') then --Delitel' 14->7->3,5->1,75MGc
->>>>>>> nomega
 			freq <= freq+1;
 	end if;
 end process;
@@ -805,11 +711,7 @@ end process;
 
 port_fffc_cs <='0' when adress(15 downto 0)=X"fffc" and iorqge='0' and iorq='0' and m1='1' else '1';
 
-<<<<<<< HEAD
-process(f14,res,port_fffc_cs,Data,wr) -- ���� FFFC
-=======
 process(f14,res,port_fffc_cs,Data,wr) -- port FFFC
->>>>>>> nomega
 begin
 	if (res='0') then
 		port_fffc <= "00000000";
@@ -820,32 +722,19 @@ end process;
 
 process (port_fffc, ay_clk_ext, freq, reg_dffd(7))
 begin
-<<<<<<< HEAD
-	if port_fffc(0)='1' or dffd_80ds='1' then
-		ay_clk <= ay_clk_ext; -- �������������� ������� �������������
-	else
-		ay_clk <= freq(2); -- 1,75���
-=======
 	if port_fffc(0)='1' or reg_dffd(7)='1' then
 		ay_clk <= ay_clk_ext; -- al'ternativnaja chastota muzprocessora
 	else
 		ay_clk <= freq(2); -- 1,75MGc
->>>>>>> nomega
 	end if;
 end process;
 
 process (port_fffc, ay_clk_ext, f)
 begin
 	if port_fffc(1)='1' then
-<<<<<<< HEAD
-		ay_clk_ext <= f(1); -- 2���
-	else
-		ay_clk_ext <= f(2); -- 1���
-=======
 		ay_clk_ext <= f(1); -- 2MGc
 	else
 		ay_clk_ext <= f(2); -- 1MGc
->>>>>>> nomega
 	end if;
 end process;
 
@@ -877,11 +766,7 @@ dac <= '0' when CHAN_A = '1' or CHAN_C = '1' else '1';
 
 ------------------------DATA-----------------------------
 
-<<<<<<< HEAD
-process(f14,Data,csff,z_data,rd,wr,iorq,intr,drq,adress,cpm,fi,rxrdt,txrdt,p4i)
-=======
 process(f14,Data,csff,z_data,rd,wr,iorq,intr,drq,adress,cpm,timer,fi,rxrdt,txrdt,ri,dcd,p4i,cs_7ffd,cs_dffd,reg_7ffd,reg_dffd,dos)
->>>>>>> nomega
 begin
 if csff='1' and rd='0' and wr='1' then
 		Data(7 downto 0) <= intr & drq & "111111";

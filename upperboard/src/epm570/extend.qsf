@@ -79,12 +79,9 @@ set_location_assignment PIN_95 -to w_a_i_t
 set_global_assignment -name SYNTH_TIMING_DRIVEN_SYNTHESIS OFF
 set_global_assignment -name OPTIMIZE_HOLD_TIMING OFF
 set_global_assignment -name FITTER_EFFORT "STANDARD FIT"
-<<<<<<< HEAD
-=======
 set_global_assignment -name VHDL_FILE SPI.vhd
 set_global_assignment -name VHDL_FILE extend.vhd
 set_global_assignment -name VECTOR_WAVEFORM_FILE extend.vwf
->>>>>>> nomega
 set_location_assignment PIN_31 -to Data[0]
 set_location_assignment PIN_30 -to Data[1]
 set_location_assignment PIN_29 -to Data[2]
