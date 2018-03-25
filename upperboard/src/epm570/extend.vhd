@@ -91,6 +91,11 @@ dcd				:in std_logic;
 --ATM_PB3		:out std_logic := 'Z'; -- signal dlja chasov Profi
 --ATM_PB4		:out std_logic := 'Z'; -- signal dlja chasov Profi
 
+--------------mega------------------
+AVR_CLK			: in std_logic := '0';
+AVR_DAT			: in std_logic := '0';
+AVR_RST 			: in std_logic := '0';
+
 ---------------HDD------------------
 hdd_a0			:out std_logic;
 hdd_a1			:out std_logic;
@@ -150,18 +155,6 @@ COMPONENT SPI
         DO      : out std_logic_vector(7 downto 0);
         SCK     : out std_logic;
         MOSI    : out std_logic
-        );
-END COMPONENT ;
----------------------------------------------------------------------------
-COMPONENT cpld_kbd               
-    port(
-        --INPUTS
-    A           : in std_logic_vector(15 downto 8);     -- address bus for kbd
-    AVR_CLK     : in std_logic;
-    AVR_RST     : in std_logic;
-    AVR_DATA    : in std_logic;
-			-- OUTPUTS
-	 KB          : out std_logic_vector(4 downto 0) := "11111"     -- data bus for kbd
         );
 END COMPONENT ;
 ---------------------------------------------------------------------------
@@ -302,6 +295,9 @@ signal nemo_ior		:std_logic;
 signal hdd_iorqge		:std_logic;
 signal nemo_ebl		:std_logic;
 signal profi_ebl		:std_logic;
+
+--------------------kbd / mouse ----------------------------
+signal kbus				: std_logic_vector(4 downto 0) := "11111";
 
 begin
 
@@ -766,9 +762,9 @@ dac <= '0' when CHAN_A = '1' or CHAN_C = '1' else '1';
 
 ------------------------DATA-----------------------------
 
-process(f14,Data,csff,z_data,rd,wr,iorq,intr,drq,adress,cpm,timer,fi,rxrdt,txrdt,ri,dcd,p4i,cs_7ffd,cs_dffd,reg_7ffd,reg_dffd,dos)
+process(f14,Data,csff,z_data,rd,wr,m1,iorq,intr,drq,adress,cpm,timer,fi,rxrdt,txrdt,ri,dcd,p4i,cs_7ffd,cs_dffd,reg_7ffd,reg_dffd,dos)
 begin
-if csff='1' and rd='0' and wr='1' then
+	if csff='1' and rd='0' and wr='1' then
 		Data(7 downto 0) <= intr & drq & "111111";
 	elsif (adress(7 downto 0)=X"57" and iorq='0' and rd='0' and wr='1' and cpm='1') then
 		Data(7 downto 0) <= z_data(7 downto 0);
@@ -788,6 +784,8 @@ if csff='1' and rd='0' and wr='1' then
 --		Data <= "11111110";
 --	elsif DCD='1' and P4I='0' and rd='0' and wr='1' then
 --		Data <= "01111111";
+	elsif (adress(0)='0' and iorq='0' and rd='0' and wr='1') then 
+		Data <= "111" & kbus(4 downto 0);
 	else
 		Data <= "ZZZZZZZZ"; 
 end if; 
@@ -823,15 +821,20 @@ port map(
 	MOSI    		=> SD_DI
 );
 
-PS2_KBD: cpld_kbd
+PS2_KBD: entity work.cpld_kbd
 PORT MAP (
         --INPUTS
     A => Adress(15 downto 8), -- address bus for kbd
-    AVR_CLK => f14,
-    AVR_RST => reset,
-    AVR_DATA => Data(0),
-			-- OUTPUTS
-	 KB => kbus
+    AVR_CLK => AVR_CLK,
+    AVR_RST => AVR_RST,
+    AVR_DATA => AVR_DAT,
+	 -- OUTPUTS
+	 KB => kbus,
+	 -- TODO:
+	 O_RESET => open,
+	 O_TURBO => open,
+	 O_MAGIC => open,
+	 O_F => open
 );
 
 end extend_arch;

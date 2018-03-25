@@ -12,16 +12,22 @@ entity cpld_kbd is
     KB          : out std_logic_vector(4 downto 0) := "11111";     -- data bus for kbd
     AVR_CLK     : in std_logic;
     AVR_RST     : in std_logic;
-    AVR_DATA    : in std_logic
+    AVR_DATA    : in std_logic;
 
+	 O_RESET 	 : out std_logic := '0';
+	 O_MAGIC		 : out std_logic := '0';
+	 O_TURBO 	 : out std_logic := '0';
+
+	 O_F 			 : out std_logic_vector(9 downto 0) := "0000000000"
+	 
 	);
     end cpld_kbd;
 architecture RTL of cpld_kbd is
 
-    -- 40 spectrum keyboard keys
-    type kb_mem is  array( 0 to 39 ) of  std_logic;
+    -- 40 spectrum keyboard keys + 3 special buttons + 10 functional keys
+    type kb_mem is  array( 0 to 52 ) of  std_logic;
     signal kb_data : kb_mem;
-    signal kb_addr : integer range 0 to 39;
+    signal kb_addr : integer range 0 to 52;
 
 begin
 
@@ -101,7 +107,23 @@ begin
 					or   ( kb_data(29) and not(A(13)) ) 
 					or   ( kb_data(34) and not(A(14)) ) 
 					or   ( kb_data(39) and not(A(15)) ) );
---
+					
+		O_RESET <= kb_data(41);
+		O_MAGIC <= kb_data(40);
+		O_TURBO <= kb_data(42);		
+
+		O_F(9) <= kb_data(52);
+		O_F(8) <= kb_data(51);
+		O_F(7) <= kb_data(50);
+		O_F(6) <= kb_data(49);
+		O_F(5) <= kb_data(48);
+		O_F(4) <= kb_data(47);
+		O_F(3) <= kb_data(46);
+		O_F(2) <= kb_data(45);
+		O_F(1) <= kb_data(44);
+		O_F(0) <= kb_data(43);
+
+		--
 end process;
 
 end RTL;

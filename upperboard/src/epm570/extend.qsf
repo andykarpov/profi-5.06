@@ -79,9 +79,6 @@ set_location_assignment PIN_95 -to w_a_i_t
 set_global_assignment -name SYNTH_TIMING_DRIVEN_SYNTHESIS OFF
 set_global_assignment -name OPTIMIZE_HOLD_TIMING OFF
 set_global_assignment -name FITTER_EFFORT "STANDARD FIT"
-set_global_assignment -name VHDL_FILE SPI.vhd
-set_global_assignment -name VHDL_FILE extend.vhd
-set_global_assignment -name VECTOR_WAVEFORM_FILE extend.vwf
 set_location_assignment PIN_31 -to Data[0]
 set_location_assignment PIN_30 -to Data[1]
 set_location_assignment PIN_29 -to Data[2]
@@ -138,11 +135,6 @@ set_location_assignment PIN_62 -to txrdt
 set_location_assignment PIN_87 -to timer
 set_location_assignment PIN_93 -to ri
 set_location_assignment PIN_94 -to dcd
-set_location_assignment PIN_88 -to INT0I
-set_location_assignment PIN_89 -to READY_n
-set_location_assignment PIN_101 -to INT1
-set_location_assignment PIN_102 -to ADR0
-set_location_assignment PIN_103 -to ADR1
 set_location_assignment PIN_104 -to SEL
 set_location_assignment PIN_105 -to INT0
 set_location_assignment PIN_96 -to int
@@ -174,9 +166,12 @@ set_location_assignment PIN_124 -to iorqge_sl
 set_location_assignment PIN_51 -to cache_oe
 set_location_assignment PIN_122 -to ay_clk
 set_location_assignment PIN_125 -to ATM_PB3
-set_location_assignment PIN_123 -to ATM_PB4
 set_location_assignment PIN_121 -to cpld_121
 set_global_assignment -name VHDL_FILE cpld_kbd.vhd
 set_global_assignment -name VHDL_FILE SPI.vhd
 set_global_assignment -name VHDL_FILE extend.vhd
 set_global_assignment -name VECTOR_WAVEFORM_FILE extend.vwf
+
+set_location_assignment PIN_123 -to AVR_RST
+set_location_assignment PIN_102 -to AVR_CLK
+set_location_assignment PIN_103 -to AVR_DAT
