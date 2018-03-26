@@ -278,6 +278,9 @@ signal reg_dffd		:std_logic_vector(7 downto 0);
 signal iorqge_7ffd	:std_logic;
 signal iorqge_dffd	:std_logic;
 
+---------- FE port -------------------
+signal cs_fe 			: std_logic;
+
 --------------------HDD-NEMO/PROFI-----------------------
 signal WWC				:std_logic;
 signal WWE				:std_logic;
@@ -375,6 +378,9 @@ process(f14,cs_7ffd,cs_dffd,rd)
 			iorqge_dffd <= not cs_dffd and not rd;
         end if;
     end process;
+	 
+-- FE port 
+cs_fe <= adress(0) or iorq or iorqge;
 
 -----------------DATA BUFFER------------------------
 drive_oe <= spi_iorqge or profi_ebl or nemo_ebl;
@@ -382,7 +388,7 @@ floppy_oe <= not csff and cswg;
 sound_oe <= fon and not CHAN_A and not CHAN_B and not CHAN_C and not CHAN_D and CSFFFD and saa_cs and port_fffc_cs;
 
 t_ap6 <= (rd or not wr or not m1_z) and FI and cache_rd;
-csap6 <= not drive_oe and floppy_oe and sound_oe and vv55_cs and vi53_cs and vv51_cs and P4I and FI and cs_dffd and cs_7ffd and cache_en and cache_cs;
+csap6 <= not drive_oe and floppy_oe and sound_oe and vv55_cs and vi53_cs and vv51_cs and P4I and FI and cs_dffd and cs_7ffd and cache_en and cache_cs and cs_fe;
 oe_ap6 <= csap6 and m1_z; 
 t_lvc245 <= (rd or not wr or not m1_z or (not spi_iorqge and not csff and not iorqge_7ffd and not iorqge_dffd)) and FI;
 
@@ -784,7 +790,7 @@ begin
 --		Data <= "11111110";
 --	elsif DCD='1' and P4I='0' and rd='0' and wr='1' then
 --		Data <= "01111111";
-	elsif (adress(0)='0' and iorq='0' and rd='0' and wr='1') then 
+	elsif (cs_fe='0' and rd='0' and wr='1' and m1='1') then 
 		Data <= "111" & kbus(4 downto 0);
 	else
 		Data <= "ZZZZZZZZ"; 
