@@ -302,6 +302,7 @@ signal profi_ebl		:std_logic;
 
 --------------------kbd / mouse ----------------------------
 signal kbus				: std_logic_vector(4 downto 0) := "11111";
+signal kbus_cs 		: std_logic;
 
 begin
 
@@ -832,6 +833,8 @@ port map(
 PS2_KBD: entity work.cpld_kbd
 PORT MAP (
         --INPUTS
+	 CLK => f14,
+	 N_CS => kbus_cs,
     A => Adress(15 downto 8), -- address bus for kbd
     AVR_CLK => AVR_CLK,
     AVR_RST => AVR_RST,
@@ -844,5 +847,8 @@ PORT MAP (
 	 O_MAGIC => open,
 	 O_F => open
 );
+
+kbus_cs <= '0' when cs_fe='0' and rd='0' else '1';
+DBG <= kbus;
 
 end extend_arch;
