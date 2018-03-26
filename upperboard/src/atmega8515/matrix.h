@@ -26,7 +26,7 @@
 // Key position in output array
 
 //#define ZX_MATRIX_SIZE 71 // 40 keys + magic + reset + turbo + F1-F10 + 8bit mouse x + 8 bit mouse y + 2 mouse buttons
-#define ZX_MATRIX_SIZE 53 // only 40 keys + magic + reset + turbo + 10 functional keys
+#define ZX_MATRIX_SIZE 41 // only 40 keys + bit6
 
 #define ZX_K_CS  0
 #define ZX_K_A   1
@@ -69,46 +69,35 @@
 #define ZX_K_H   38
 #define ZX_K_B   39
 
-// special keys
-#define ZX_K_MGC 40    // magic key
-#define ZX_K_RST 41    // CPU reset
-#define ZX_K_TRB 42    // Turbo switch
-
-// Fn keys
-#define ZX_K_F1  43
-#define ZX_K_F2  44
-#define ZX_K_F3  45
-#define ZX_K_F4  46
-#define ZX_K_F5  47
-#define ZX_K_F6  48
-#define ZX_K_F7  49
-#define ZX_K_F8  50
-#define ZX_K_F9  51
-#define ZX_K_F10 52
+// Fn keys ext bit
+#define ZX_K_BIT6  40
 
 // Mouse pos Y
-#define ZX_M_X0  53
-#define ZX_M_X1  54
-#define ZX_M_X2  55
-#define ZX_M_X3  56
-#define ZX_M_X4  57
-#define ZX_M_X5  58
-#define ZX_M_X6  59
-#define ZX_M_X7  60
+#define ZX_M_X0  41
+#define ZX_M_X1  42
+#define ZX_M_X2  43
+#define ZX_M_X3  44
+#define ZX_M_X4  45
+#define ZX_M_X5  46
+#define ZX_M_X6  47
+#define ZX_M_X7  48
 
 // Mouse pos Y
-#define ZX_M_Y0  61
-#define ZX_M_Y1  62
-#define ZX_M_Y2  63
-#define ZX_M_Y3  64
-#define ZX_M_Y4  65
-#define ZX_M_Y5  66
-#define ZX_M_Y6  67
-#define ZX_M_Y7  68
+#define ZX_M_Y0  49
+#define ZX_M_Y1  50
+#define ZX_M_Y2  51
+#define ZX_M_Y3  52
+#define ZX_M_Y4  53
+#define ZX_M_Y5  54
+#define ZX_M_Y6  55
+#define ZX_M_Y7  56
 
 // Mouse btns
-#define ZX_M_B1  69
-#define ZX_M_B2  70
+#define ZX_M_B1  57
+#define ZX_M_B2  58
+#define ZX_M_B3  59
+
+
 
 #endif
 

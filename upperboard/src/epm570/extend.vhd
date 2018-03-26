@@ -301,7 +301,7 @@ signal nemo_ebl		:std_logic;
 signal profi_ebl		:std_logic;
 
 --------------------kbd / mouse ----------------------------
-signal kbus				: std_logic_vector(4 downto 0) := "11111";
+signal kbus				: std_logic_vector(5 downto 0) := "111111";
 signal kbus_cs 		: std_logic;
 
 begin
@@ -794,7 +794,7 @@ begin
 --	elsif DCD='1' and P4I='0' and rd='0' and wr='1' then
 --		Data <= "01111111";
 	elsif (cs_fe='0' and rd='0' and wr='1' and m1='1') then 
-		Data <= "111" & kbus(4 downto 0);
+		Data <= "11" & kbus(5 downto 0);
 	else
 		Data <= "ZZZZZZZZ"; 
 end if; 
@@ -840,12 +840,7 @@ PORT MAP (
     AVR_RST => AVR_RST,
     AVR_DATA => AVR_DAT,
 	 -- OUTPUTS
-	 KB => kbus,
-	 -- TODO:
-	 O_RESET => open,
-	 O_TURBO => open,
-	 O_MAGIC => open,
-	 O_F => open
+	 KB => kbus
 );
 
 kbus_cs <= '0' when cs_fe='0' and rd='0' else '1';
