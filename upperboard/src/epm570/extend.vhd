@@ -849,6 +849,6 @@ PORT MAP (
 );
 
 kbus_cs <= '0' when cs_fe='0' and rd='0' else '1';
-DBG <= kbus;
+--DBG <= kbus;
 
 end extend_arch;
