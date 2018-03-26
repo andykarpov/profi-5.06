@@ -280,6 +280,7 @@ signal iorqge_dffd	:std_logic;
 
 ---------- FE port -------------------
 signal cs_fe 			: std_logic;
+signal iorqge_fe 		: std_logic;
 
 --------------------HDD-NEMO/PROFI-----------------------
 signal WWC				:std_logic;
@@ -305,7 +306,7 @@ signal kbus				: std_logic_vector(4 downto 0) := "11111";
 begin
 
 f14 <= not zx14mhz;
-iorqge <= spi_iorqge or hdd_iorqge or not saa_cs or iorq_z or iorqge_sl or iorqge_7ffd or iorqge_dffd;
+iorqge <= spi_iorqge or hdd_iorqge or not saa_cs or iorq_z or iorqge_sl or iorqge_7ffd or iorqge_dffd or iorqge_fe;
 
 ----------------Z80-Synchronization---------------------
 process(f14)
@@ -380,7 +381,8 @@ process(f14,cs_7ffd,cs_dffd,rd)
     end process;
 	 
 -- FE port 
-cs_fe <= adress(0) or iorq or iorqge;
+cs_fe <= adress(0) or iorq;
+iorqge_fe <= not cs_fe and not rd;
 
 -----------------DATA BUFFER------------------------
 drive_oe <= spi_iorqge or profi_ebl or nemo_ebl;
@@ -390,7 +392,7 @@ sound_oe <= fon and not CHAN_A and not CHAN_B and not CHAN_C and not CHAN_D and 
 t_ap6 <= (rd or not wr or not m1_z) and FI and cache_rd;
 csap6 <= not drive_oe and floppy_oe and sound_oe and vv55_cs and vi53_cs and vv51_cs and P4I and FI and cs_dffd and cs_7ffd and cache_en and cache_cs and cs_fe;
 oe_ap6 <= csap6 and m1_z; 
-t_lvc245 <= (rd or not wr or not m1_z or (not spi_iorqge and not csff and not iorqge_7ffd and not iorqge_dffd)) and FI;
+t_lvc245 <= (rd or not wr or not m1_z or (not spi_iorqge and not csff and not iorqge_7ffd and not iorqge_dffd and not iorqge_fe)) and FI;
 
 ----------------VV55------------------------
 RT_F5 <='0' when adress(7)='0' and adress(1 downto 0)="11" and iorq='0' and CPM='1' and dos='1' else '1';
@@ -768,7 +770,7 @@ dac <= '0' when CHAN_A = '1' or CHAN_C = '1' else '1';
 
 ------------------------DATA-----------------------------
 
-process(f14,Data,csff,z_data,rd,wr,m1,iorq,intr,drq,adress,cpm,timer,fi,rxrdt,txrdt,ri,dcd,p4i,cs_7ffd,cs_dffd,reg_7ffd,reg_dffd,dos)
+process(f14,Data,csff,z_data,rd,wr,m1,iorq,intr,drq,adress,cpm,timer,fi,rxrdt,txrdt,ri,dcd,p4i,cs_7ffd,cs_dffd,reg_7ffd,reg_dffd,dos,cs_fe,kbus)
 begin
 	if csff='1' and rd='0' and wr='1' then
 		Data(7 downto 0) <= intr & drq & "111111";
