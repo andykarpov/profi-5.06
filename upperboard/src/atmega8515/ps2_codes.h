@@ -81,6 +81,8 @@
 #define PS2_DOWN	0x172
 #define PS2_LEFT	0x16B
 #define PS2_RIGHT	0x174
+#define PS2_PSCR1 0x112
+#define PS2_PSCR2 0x17c
 
 // F1..F12
 #define PS2_F1		0x05

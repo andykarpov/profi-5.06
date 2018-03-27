@@ -25,7 +25,7 @@
 
 // Key position in output array
 
-//#define ZX_MATRIX_SIZE 71 // 40 keys + magic + reset + turbo + F1-F10 + 8bit mouse x + 8 bit mouse y + 2 mouse buttons
+//#define ZX_MATRIX_SIZE 66 // 40 keys + bit6 + 8bit mouse x + 8 bit mouse y + 3 mouse buttons + wheel data
 #define ZX_MATRIX_SIZE 41 // only 40 keys + bit6
 
 #define ZX_K_CS  0
@@ -97,7 +97,13 @@
 #define ZX_M_B2  58
 #define ZX_M_B3  59
 
-
+// Mouse wheel
+#define ZX_M_S0  60
+#define ZX_M_S1  61
+#define ZX_M_S2  62
+#define ZX_M_S3  63
+#define ZX_M_S4  64
+#define ZX_M_S5  65
 
 #endif
 

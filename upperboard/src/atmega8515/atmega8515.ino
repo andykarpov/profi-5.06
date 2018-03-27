@@ -1,6 +1,8 @@
 /*
- * Atmega8515 firmware for Profi 5.06
- * @author <andy.karpov@gmail.com>
+ * AVR keyboard & mouse firmware for Profi 5.06
+ * Atmega8515 replacement on Atmega328p :)
+ * 
+ * @author Andy Karpov <andy.karpov@gmail.com>
  */
 
 #include "ps2.h"
@@ -17,24 +19,32 @@
 #define PIN_AVR_RST 12 // pin 5 (ATM_PB4 - CPLD PIN 123)
 #define PIN_AVR_DAT 13 // pin 15 (ATM_ADD1 - CPLD PIN 103)
 
-#define PIN_RESET 10
+#define PIN_RESET 10 // pin 1 (/RESET)
+#define PIN_TURBO 9 // pin 3 (/TURBO)
+#define PIN_MAGIC 8 // pin 2 (ATM_/MAGIC)
 
 PS2KeyRaw kbd;
 //PS2KeyRaw mouse;
 
 bool matrix[ZX_MATRIX_SIZE];
 bool profi_mode = true; // false = zx spectrum mode
+bool is_turbo = false; // turbo toggle
 
 void fill_kbd_matrix(int sc)
 {
 
-  static unsigned char is_up=0, is_e=0;
-  static unsigned char is_ctrl=0, is_alt=0, is_del=0;
-  unsigned char i;
+  static bool is_up=false, is_e=false, is_e1=false;
+  static bool is_ctrl=false, is_alt=false, is_del=false;
 
   // is extended scancode prefix
   if (sc == 0xE0) {
     is_e = 1;
+    return;
+  }
+
+ if (sc == 0xE1) {
+    is_e = 1;
+    is_e1 = 1;
     return;
   }
 
@@ -44,7 +54,7 @@ void fill_kbd_matrix(int sc)
     return;
   }
 
-  int scancode = sc + ((is_e) ? 0x100 : 0);
+  int scancode = sc + ((is_e || is_e1) ? 0x100 : 0);
 
   switch (scancode) {
   
@@ -338,12 +348,24 @@ void fill_kbd_matrix(int sc)
     case PS2_F11: matrix[ZX_K_Q] = !is_up; matrix[ZX_K_SS] = !is_up; break;
     case PS2_F12: matrix[ZX_K_W] = !is_up; matrix[ZX_K_SS] = !is_up; break;
 
-    // TODO:
+    // Scroll Lock -> Turbo
+    case PS2_SCROLL: 
+      if (is_up) {
+        is_turbo = !is_turbo;
+        digitalWrite(PIN_TURBO, is_turbo ? LOW : HIGH);
+      }
+    break;
 
+    // PrtScr -> Mode profi / zx
+    case PS2_PSCR1:
+      if (is_up) {
+        profi_mode = !profi_mode;
+      }
+    break;
+
+    // TODO:
     // Windows L / Home -> SS+F
     // Windiws R / End -> SS+G
-    // Scroll Lock -> CS+9
-    // PrtScr -> CS+SS+P  
   
   }
 
@@ -352,7 +374,11 @@ void fill_kbd_matrix(int sc)
 
    // clear flags
    is_up = 0;
-   is_e = 0;
+   if (is_e1) {
+    is_e1 = 0;
+   } else {
+     is_e = 0;
+   }
 }
 
 void transmit_matrix()
@@ -392,6 +418,12 @@ void setup()
 
   pinMode(PIN_RESET, OUTPUT);
   digitalWrite(PIN_RESET, HIGH);
+
+  pinMode(PIN_TURBO, OUTPUT);
+  digitalWrite(PIN_TURBO, HIGH);
+
+  pinMode(PIN_MAGIC, OUTPUT);
+  digitalWrite(PIN_MAGIC, HIGH);
 
   // all keys up
   for (int i=0; i<ZX_MATRIX_SIZE; i++) {
