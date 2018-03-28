@@ -9,19 +9,42 @@
 #include "matrix.h"
 #include "ps2_codes.h"
 
+
+// ---- Pins for Atmega328 ----
 #define PIN_KBD_CLK 2 // pin 28 (CLKK)
 #define PIN_KBD_DAT 4 // pin 27 (DATK)
 
-//#define PIN_MOUSE_CLK 3 // pin 26 (CLKM)
-//#define PIN_MOUSE_DAT 5 // pin 25 (DATM)
+#define PIN_MOUSE_CLK 3 // pin 26 (CLKM)
+#define PIN_MOUSE_DAT 5 // pin 25 (DATM)
 
 #define PIN_AVR_CLK 11 // pin 14 (ATM_ADR0 - CPLD PIN 102)
 #define PIN_AVR_RST 12 // pin 5 (ATM_PB4 - CPLD PIN 123)
 #define PIN_AVR_DAT 13 // pin 15 (ATM_ADD1 - CPLD PIN 103)
 
 #define PIN_RESET 10 // pin 1 (/RESET)
-#define PIN_TURBO 9 // pin 3 (/TURBO)
-#define PIN_MAGIC 8 // pin 2 (ATM_/MAGIC)
+#define PIN_TURBO 9 //  pin 3 (/TURBO)
+#define PIN_MAGIC 8 //  pin 2 (ATM_/MAGIC)
+
+/*
+// ---- Pins for Atmega8515 ----
+// Profi upper board modifications:
+// 1) replace crystal with 16MHz
+// 2) add wire between D34:28 and D34:13
+#define PIN_KBD_CLK_ORIG 23 // pin 28 (CLKK)
+#define PIN_KBD_CLK 11 // pin 13 must be connected to pin 28.
+#define PIN_KBD_DAT 22 // pin 27 (DATK)
+
+#define PIN_MOUSE_CLK 21 // pin 26 (CLKM)
+#define PIN_MOUSE_DAT 20 // pin 25 (DATM)
+
+#define PIN_AVR_CLK 12 // pin 14 (ATM_ADR0 - CPLD PIN 102)
+#define PIN_AVR_RST 4 // pin 5 (ATM_PB4 - CPLD PIN 123)
+#define PIN_AVR_DAT 13 // pin 15 (ATM_ADD1 - CPLD PIN 103)
+
+#define PIN_RESET 0 // pin 1 (/RESET)
+#define PIN_TURBO 2 //  pin 3 (/TURBO)
+#define PIN_MAGIC 1 //  pin 2 (ATM_/MAGIC)
+*/
 
 PS2KeyRaw kbd;
 //PS2KeyRaw mouse;
@@ -406,8 +429,17 @@ void transmit_matrix()
 
 void setup()
 {
-  Serial.begin(115200);
+  //Serial.begin(115200);
+  //Serial.println(F("ZX Keyboard v1.0"));
 
+// 8515 trick
+#ifdef PIN_KBD_CLK_ORIG
+  pinMode(PIN_KBD_CLK_ORIG, INPUT);
+#endif 
+
+  pinMode(PIN_KBD_CLK, INPUT_PULLUP);
+  pinMode(PIN_KBD_DAT, INPUT_PULLUP);
+  
   // serial interface setup
   pinMode(PIN_AVR_CLK, OUTPUT);
   pinMode(PIN_AVR_RST, OUTPUT);
@@ -439,7 +471,7 @@ void loop()
 {
   if (kbd.available()) {
     int c = kbd.read();
-    Serial.println(c, HEX);
+    //Serial.println(c, HEX);
     fill_kbd_matrix(c);
   }
   // transmit
