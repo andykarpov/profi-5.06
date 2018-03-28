@@ -95,6 +95,7 @@ dcd				:in std_logic;
 AVR_CLK			: in std_logic := '0';
 AVR_DAT			: in std_logic := '0';
 AVR_RST 			: in std_logic := '0';
+INT1 				: in std_logic;
 
 ---------------HDD------------------
 hdd_a0			:out std_logic;

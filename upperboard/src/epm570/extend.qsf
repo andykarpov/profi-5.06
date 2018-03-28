@@ -175,3 +175,4 @@ set_global_assignment -name VECTOR_WAVEFORM_FILE extend.vwf
 set_location_assignment PIN_123 -to AVR_RST
 set_location_assignment PIN_102 -to AVR_CLK
 set_location_assignment PIN_103 -to AVR_DAT
+set_location_assignment PIN_101 -to INT1
