@@ -25,8 +25,8 @@
 
 // Key position in output array
 
-//#define ZX_MATRIX_SIZE 65 // 40 keys + bit6 + 8bit mouse x + 8 bit mouse y + 3 mouse buttons + wheel data + flag
-#define ZX_MATRIX_SIZE 41 // only 40 keys + bit6
+#define ZX_MATRIX_SIZE 65 // 40 keys + bit6 + 8bit mouse x + 8 bit mouse y + 3 mouse buttons + wheel data + flag
+//#define ZX_MATRIX_SIZE 41 // only 40 keys + bit6
 
 #define ZX_K_CS  0
 #define ZX_K_A   1

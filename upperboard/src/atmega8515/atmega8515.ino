@@ -8,7 +8,9 @@
 #include "ps2.h"
 #include "matrix.h"
 #include "ps2_codes.h"
+#include "ps2mouse.h"
 
+#define DEBUG_MODE 1
 
 // ---- Pins for Atmega328 ----
 #define PIN_KBD_CLK 2 // pin 28 (CLKK)
@@ -47,11 +49,13 @@
 */
 
 PS2KeyRaw kbd;
-//PS2KeyRaw mouse;
+PS2Mouse mouse(PIN_MOUSE_CLK, PIN_MOUSE_DAT);
 
 bool matrix[ZX_MATRIX_SIZE];
 bool profi_mode = true; // false = zx spectrum mode
 bool is_turbo = false; // turbo toggle
+bool mouse_present = false; // mouse present flag
+long t = 0;
 
 void fill_kbd_matrix(int sc)
 {
@@ -429,8 +433,10 @@ void transmit_matrix()
 
 void setup()
 {
-  //Serial.begin(115200);
-  //Serial.println(F("ZX Keyboard v1.0"));
+#if DEBUG_MODE
+    Serial.begin(115200);
+    Serial.println(F("ZX Keyboard v1.0"));
+#endif
 
 // 8515 trick
 #ifdef PIN_KBD_CLK_ORIG
@@ -439,6 +445,9 @@ void setup()
 
   pinMode(PIN_KBD_CLK, INPUT_PULLUP);
   pinMode(PIN_KBD_DAT, INPUT_PULLUP);
+
+  pinMode(PIN_MOUSE_CLK, INPUT_PULLUP);
+  pinMode(PIN_MOUSE_DAT, INPUT_PULLUP);
   
   // serial interface setup
   pinMode(PIN_AVR_CLK, OUTPUT);
@@ -463,8 +472,14 @@ void setup()
   }
 
   kbd.begin(PIN_KBD_DAT, PIN_KBD_CLK);
-//  mouse.begin(PIN_MOUSE_DAT, PIN_MOUSE_CLK);
-  
+  mouse_present = mouse.initialize();
+#if DEBUG_MODE
+  if (!mouse_present) {
+    Serial.println(F("Mouse does not exists"));
+  } else {
+    Serial.println(F("Mouse present"));
+  }
+#endif
 }
 
 void loop()
@@ -474,14 +489,58 @@ void loop()
     //Serial.println(c, HEX);
     fill_kbd_matrix(c);
   }
+
+  long n = millis();
+
+  if (mouse_present && n - t > 100) {
+
+    MouseData m = mouse.readData();
+
+    matrix[ZX_M_X0] = bitRead(m.position.x, 0);
+    matrix[ZX_M_X1] = bitRead(m.position.x, 1);
+    matrix[ZX_M_X2] = bitRead(m.position.x, 2);
+    matrix[ZX_M_X3] = bitRead(m.position.x, 3);
+    matrix[ZX_M_X4] = bitRead(m.position.x, 4);
+    matrix[ZX_M_X5] = bitRead(m.position.x, 5);
+    matrix[ZX_M_X6] = bitRead(m.position.x, 6);
+    matrix[ZX_M_X7] = bitRead(m.position.x, 7);
+
+    matrix[ZX_M_Y0] = bitRead(m.position.y, 0);
+    matrix[ZX_M_Y1] = bitRead(m.position.y, 1);
+    matrix[ZX_M_Y2] = bitRead(m.position.y, 2);
+    matrix[ZX_M_Y3] = bitRead(m.position.y, 3);
+    matrix[ZX_M_Y4] = bitRead(m.position.y, 4);
+    matrix[ZX_M_Y5] = bitRead(m.position.y, 5);
+    matrix[ZX_M_Y6] = bitRead(m.position.y, 6);
+    matrix[ZX_M_Y7] = bitRead(m.position.y, 7);
+
+    matrix[ZX_M_B1] = bitRead(m.status, 0);
+    matrix[ZX_M_B2] = bitRead(m.status, 1);
+    matrix[ZX_M_B3] = bitRead(m.status, 2);
+
+    matrix[ZX_M_S0] = bitRead(m.wheel, 3);
+    matrix[ZX_M_S1] = bitRead(m.wheel, 4);
+    matrix[ZX_M_S2] = bitRead(m.wheel, 5);
+    matrix[ZX_M_S3] = bitRead(m.wheel, 6);
+
+    matrix[ZX_M_NEW_PACKET] = !matrix[ZX_M_NEW_PACKET];
+
+    t = n;
+
+#if DEBUG_MODE
+    Serial.print(m.status, BIN);
+    Serial.print(F("\tx="));
+    Serial.print(m.position.x);
+    Serial.print(F("\ty="));
+    Serial.print(m.position.y);
+    Serial.print(F("\tw="));
+    Serial.print(m.wheel);
+    Serial.println();
+#endif
+
+  }
+  
   // transmit
   transmit_matrix();
-
-  // debug
-//  bool a = false;
-//  if (matrix[ZX_K_A] != a) {
-//    Serial.println(matrix[ZX_K_A]);
-//    a = matrix[ZX_K_A];
-//  }
 }
 
