@@ -2,6 +2,9 @@
  * AVR keyboard & mouse firmware for Profi 5.06
  * Atmega8515 replacement on Atmega328p :)
  * 
+ * Designed to build on Arduino IDE.
+ * Atmega8515 code required MajorCore support to be installed https://github.com/MCUdude/MajorCore
+ * 
  * @author Andy Karpov <andy.karpov@gmail.com>
  */
 
@@ -10,7 +13,9 @@
 #include "ps2_codes.h"
 #include "ps2mouse.h"
 
-#define DEBUG_MODE 1
+#define DEBUG_MODE 0
+
+#if defined( __AVR_ATmega328P__ ) || defined( __AVR_ATmega328__ )
 
 // ---- Pins for Atmega328 ----
 #define PIN_KBD_CLK 2 // pin 28 (CLKK)
@@ -27,11 +32,14 @@
 #define PIN_TURBO 9 //  pin 3 (/TURBO)
 #define PIN_MAGIC 8 //  pin 2 (ATM_/MAGIC)
 
-/*
+#elif defined( __AVR_ATmega8515__ ) || defined( __AVR_ATmega162__ )
+
 // ---- Pins for Atmega8515 ----
 // Profi upper board modifications:
 // 1) replace crystal with 16MHz
 // 2) add wire between D34:28 and D34:13
+// 3) add level shifters to pins 14,15,5 to translate 5v to 3.3v signals (TODO)
+
 #define PIN_KBD_CLK_ORIG 23 // pin 28 (CLKK)
 #define PIN_KBD_CLK 11 // pin 13 must be connected to pin 28.
 #define PIN_KBD_DAT 22 // pin 27 (DATK)
@@ -46,17 +54,19 @@
 #define PIN_RESET 0 // pin 1 (/RESET)
 #define PIN_TURBO 2 //  pin 3 (/TURBO)
 #define PIN_MAGIC 1 //  pin 2 (ATM_/MAGIC)
-*/
+
+#endif
 
 PS2KeyRaw kbd;
 PS2Mouse mouse(PIN_MOUSE_CLK, PIN_MOUSE_DAT);
 
-bool matrix[ZX_MATRIX_SIZE];
-bool profi_mode = true; // false = zx spectrum mode
-bool is_turbo = false; // turbo toggle
-bool mouse_present = false; // mouse present flag
+bool matrix[ZX_MATRIX_SIZE]; // matrix of pressed keys + mouse reports to be transmitted on CPLD side by simple serial protocol
+bool profi_mode = true; // false = zx spectrum mode (switched by PrtSrc button in run-time)
+bool is_turbo = false; // turbo toggle (switched by ScrollLock button)
+bool mouse_present = false; // mouse present flag (detected by signal change on CLKM pin)
 long t = 0;
 
+// transform PS/2 scancodes into internal matrix of pressed keys
 void fill_kbd_matrix(int sc)
 {
 
@@ -408,8 +418,50 @@ void fill_kbd_matrix(int sc)
    }
 }
 
+// digital write with open collector, for mega8515 and mega162
+void digitalWriteOK(int pin, int state)
+{
+  switch (state) {
+    case HIGH:
+      pinMode(pin, INPUT);
+      digitalWrite(pin, HIGH);
+    break;
+    case LOW:
+      pinMode(pin, OUTPUT);
+      digitalWrite(pin, LOW);
+    break;
+  }
+}
+
+
+// transmit matrix from AVR to CPLD side
 void transmit_matrix()
 {
+#if defined( __AVR_ATmega8515__ ) || defined( __AVR_ATmega162__ )
+    // using open collector transmission for mega8515
+
+    // reset the address
+    digitalWriteOK(PIN_AVR_RST, HIGH);
+    delayMicroseconds(1);
+    digitalWriteOK(PIN_AVR_RST, LOW);
+    delayMicroseconds(1);
+
+    // transmit the matrix
+    for(int i=0; i<ZX_MATRIX_SIZE; i++) {
+      digitalWriteOK(PIN_AVR_DAT, matrix[i]);
+
+      digitalWriteOK(PIN_AVR_CLK, HIGH);
+      delayMicroseconds(1);
+      digitalWriteOK(PIN_AVR_CLK, LOW);
+      delayMicroseconds(1);
+    }
+
+    // low data line
+    digitalWriteOK(PIN_AVR_DAT, LOW);
+    delayMicroseconds(1);
+#else 
+    // normal transmission for Atmega328p
+
     // reset the address
     digitalWrite(PIN_AVR_RST, HIGH);
     delayMicroseconds(1);
@@ -418,19 +470,21 @@ void transmit_matrix()
 
     // transmit the matrix
     for(int i=0; i<ZX_MATRIX_SIZE; i++) {
-    	digitalWrite(PIN_AVR_DAT, matrix[i]);
+      digitalWrite(PIN_AVR_DAT, matrix[i]);
 
-    	digitalWrite(PIN_AVR_CLK, HIGH);
-    	delayMicroseconds(1);
-    	digitalWrite(PIN_AVR_CLK, LOW);
-    	delayMicroseconds(1);
+      digitalWrite(PIN_AVR_CLK, HIGH);
+      delayMicroseconds(1);
+      digitalWrite(PIN_AVR_CLK, LOW);
+      delayMicroseconds(1);
     }
 
     // low data line
     digitalWrite(PIN_AVR_DAT, LOW);
     delayMicroseconds(1);
+#endif
 }
 
+// initial setup
 void setup()
 {
 #if DEBUG_MODE
@@ -438,7 +492,7 @@ void setup()
     Serial.println(F("ZX Keyboard v1.0"));
 #endif
 
-// 8515 trick
+// 8515 trick to use INT1 pin to edge detect, that is not allowed on INT2 pin
 #ifdef PIN_KBD_CLK_ORIG
   pinMode(PIN_KBD_CLK_ORIG, INPUT);
 #endif 
@@ -482,6 +536,7 @@ void setup()
 #endif
 }
 
+// main loop
 void loop()
 {
   if (kbd.available()) {
@@ -492,6 +547,7 @@ void loop()
 
   long n = millis();
 
+  // polling for mouse data every 100ms
   if (mouse_present && n - t > 100) {
 
     MouseData m = mouse.readData();
