@@ -782,7 +782,7 @@ dac <= '0' when CHAN_A = '1' or CHAN_C = '1' else '1';
 
 ------------------------DATA-----------------------------
 
-process(f14,Data,csff,z_data,rd,wr,m1,iorq,intr,drq,adress,cpm,timer,fi,rxrdt,txrdt,ri,dcd,p4i,cs_7ffd,cs_dffd,reg_7ffd,reg_dffd,dos,cs_fe,kbus)
+process(f14,Data,csff,z_data,rd,wr,m1,iorq,intr,drq,adress,cpm,timer,fi,rxrdt,txrdt,ri,dcd,p4i,cs_7ffd,cs_dffd,reg_7ffd,reg_dffd,dos,cs_fe,kbus,ms_x_bus, ms_y_bus,ms_z_bus,ms_b_bus)
 begin
 	if csff='1' and rd='0' and wr='1' then
 		Data(7 downto 0) <= intr & drq & "111111";

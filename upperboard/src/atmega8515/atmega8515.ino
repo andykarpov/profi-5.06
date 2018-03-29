@@ -518,10 +518,10 @@ void loop()
     matrix[ZX_M_B2] = bitRead(m.status, 1);
     matrix[ZX_M_B3] = bitRead(m.status, 2);
 
-    matrix[ZX_M_S0] = bitRead(m.wheel, 3);
-    matrix[ZX_M_S1] = bitRead(m.wheel, 4);
-    matrix[ZX_M_S2] = bitRead(m.wheel, 5);
-    matrix[ZX_M_S3] = bitRead(m.wheel, 6);
+    matrix[ZX_M_S0] = bitRead(m.wheel, 0);
+    matrix[ZX_M_S1] = bitRead(m.wheel, 1);
+    matrix[ZX_M_S2] = bitRead(m.wheel, 2);
+    matrix[ZX_M_S3] = bitRead(m.wheel, 3);
 
     matrix[ZX_M_NEW_PACKET] = !matrix[ZX_M_NEW_PACKET];
 

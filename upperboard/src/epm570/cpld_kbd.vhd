@@ -1,7 +1,6 @@
 library IEEE;
 use IEEE.std_logic_1164.all;
-use IEEE.std_logic_arith.all;
-use IEEE.std_logic_unsigned.all;
+use IEEE.std_logic_arith.conv_integer;
 use IEEE.numeric_std.all;
 
 entity cpld_kbd is
@@ -28,6 +27,16 @@ architecture RTL of cpld_kbd is
     signal kb_data : kb_mem;
     signal kb_addr : integer range 0 to 64;
 	 signal ms_flag : std_logic := '0';
+	 
+	 -- mouse
+	 signal currentX 	: unsigned(7 downto 0);
+	 signal currentY 	: unsigned(7 downto 0);
+	 signal cursorX 		: signed(7 downto 0) := X"7F";
+	 signal cursorY 		: signed(7 downto 0) := X"7F";
+	 signal deltaX		: signed(8 downto 0);
+	 signal deltaY		: signed(8 downto 0);
+	 signal deltaZ		: signed(3 downto 0);
+	 signal trigger 	: std_logic := '0';
 
 begin
 
@@ -112,41 +121,70 @@ begin
 				KB <= "ZZZZZZ";
 			end if;
 		
+
+		
+		end if;
+
+end process;
+
+process (CLK, kb_data) 
+begin
+		if (rising_edge(CLK)) then
+			trigger <= '0';
 			-- update mouse only on ms flag changed
 			if (ms_flag /= kb_data(64)) then 
-				MS_X(7) <= kb_data(48);
-				MS_X(6) <= kb_data(47);
-				MS_X(5) <= kb_data(46);
-				MS_X(4) <= kb_data(45);
-				MS_X(3) <= kb_data(44);
-				MS_X(2) <= kb_data(43);
-				MS_X(1) <= kb_data(42);
-				MS_X(0) <= kb_data(41);
+				deltaX(7) <= kb_data(48);
+				deltaX(6) <= kb_data(47);
+				deltaX(5) <= kb_data(46);
+				deltaX(4) <= kb_data(45);
+				deltaX(3) <= kb_data(44);
+				deltaX(2) <= kb_data(43);
+				deltaX(1) <= kb_data(42);
+				deltaX(0) <= kb_data(41);
 				
-				MS_Y(7) <= kb_data(56);
-				MS_Y(6) <= kb_data(55);
-				MS_Y(5) <= kb_data(54);
-				MS_Y(4) <= kb_data(53);
-				MS_Y(3) <= kb_data(52);
-				MS_Y(2) <= kb_data(51);
-				MS_Y(1) <= kb_data(50);
-				MS_Y(0) <= kb_data(49);
+				deltaY(7) <= kb_data(56);
+				deltaY(6) <= kb_data(55);
+				deltaY(5) <= kb_data(54);
+				deltaY(4) <= kb_data(53);
+				deltaY(3) <= kb_data(52);
+				deltaY(2) <= kb_data(51);
+				deltaY(1) <= kb_data(50);
+				deltaY(0) <= kb_data(49);
+				
+				deltaZ(3) <= kb_data(63);
+				deltaZ(2) <= kb_data(62);
+				deltaZ(1) <= kb_data(61);
+				deltaZ(0) <= kb_data(60);
 				
 				MS_BTNS(2) <= not(kb_data(59));
 				MS_BTNS(1) <= not(kb_data(58));
 				MS_BTNS(0) <= not(kb_data(57));
 				
-				MS_Z(3) <= kb_data(63);
-				MS_Z(2) <= kb_data(62);
-				MS_Z(1) <= kb_data(61);
-				MS_Z(0) <= kb_data(60);
-				
 				ms_flag <= kb_data(64);
+				trigger <= '1';
 			end if;
-		
 		end if;
-
 end process;
+
+process (CLK)
+	variable newX : signed(7 downto 0);
+	variable newY : signed(7 downto 0);
+begin
+	if rising_edge (CLK) then
+
+		newX := cursorX + deltaX(7 downto 0);
+		newY := cursorY + deltaY(7 downto 0);
+
+		if trigger = '1' then
+			cursorX <= newX;
+			cursorY <= newY;
+		end if;
+	end if;
+end process;
+	
+	MS_X 		<= std_logic_vector(cursorX);
+	MS_Y 		<= std_logic_vector(cursorY);
+	MS_Z		<= std_logic_vector(deltaZ);
 
 end RTL;
 
