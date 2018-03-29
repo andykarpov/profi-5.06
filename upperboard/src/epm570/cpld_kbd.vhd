@@ -132,9 +132,9 @@ begin
 				MS_Y(1) <= kb_data(50);
 				MS_Y(0) <= kb_data(49);
 				
-				MS_BTNS(2) <= kb_data(59);
-				MS_BTNS(1) <= kb_data(58);
-				MS_BTNS(0) <= kb_data(57);
+				MS_BTNS(2) <= not(kb_data(59));
+				MS_BTNS(1) <= not(kb_data(58));
+				MS_BTNS(0) <= not(kb_data(57));
 				
 				MS_Z(3) <= kb_data(63);
 				MS_Z(2) <= kb_data(62);
