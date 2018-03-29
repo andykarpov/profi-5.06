@@ -305,6 +305,16 @@ signal profi_ebl		:std_logic;
 signal kbus				: std_logic_vector(5 downto 0) := "111111";
 signal kbus_cs 		: std_logic;
 
+signal ms_port_fadf		: std_logic;
+signal ms_port_fbdf		: std_logic;
+signal ms_port_ffdf		: std_logic;
+signal ms_port				: std_logic;
+
+signal ms_x_bus 		 	: std_logic_vector(7 downto 0);
+signal ms_y_bus 			: std_logic_vector(7 downto 0);
+signal ms_z_bus 			: std_logic_vector(3 downto 0);
+signal ms_b_bus 			: std_logic_vector(2 downto 0);
+
 begin
 
 f14 <= not zx14mhz;
@@ -391,10 +401,10 @@ drive_oe <= spi_iorqge or profi_ebl or nemo_ebl;
 floppy_oe <= not csff and cswg;
 sound_oe <= fon and not CHAN_A and not CHAN_B and not CHAN_C and not CHAN_D and CSFFFD and saa_cs and port_fffc_cs;
 
-t_ap6 <= (rd or not wr or not m1_z) and FI and cache_rd;
-csap6 <= not drive_oe and floppy_oe and sound_oe and vv55_cs and vi53_cs and vv51_cs and P4I and FI and cs_dffd and cs_7ffd and cache_en and cache_cs and cs_fe;
+t_ap6 <= (rd or not wr or not m1_z) and FI and cache_rd and ms_port;
+csap6 <= not drive_oe and floppy_oe and sound_oe and vv55_cs and vi53_cs and vv51_cs and P4I and FI and cs_dffd and cs_7ffd and cache_en and cache_cs and cs_fe and ms_port;
 oe_ap6 <= csap6 and m1_z; 
-t_lvc245 <= (rd or not wr or not m1_z or (not spi_iorqge and not csff and not iorqge_7ffd and not iorqge_dffd and not iorqge_fe)) and FI;
+t_lvc245 <= (rd or not wr or not m1_z or (not spi_iorqge and not csff and not iorqge_7ffd and not iorqge_dffd and not iorqge_fe)) and FI and ms_port;
 
 ----------------VV55------------------------
 RT_F5 <='0' when adress(7)='0' and adress(1 downto 0)="11" and iorq='0' and CPM='1' and dos='1' else '1';
@@ -796,6 +806,12 @@ begin
 --		Data <= "01111111";
 	elsif (cs_fe='0' and rd='0' and wr='1' and m1='1') then 
 		Data <= "11" & kbus(5 downto 0);
+	elsif	(iorq = '0' and rd = '0' and adress(15 downto 0) = "1111101011011111") then -- Mouse Port FADF[11111010_11011111] = <Z>1<MB><LB><RB>
+		data <= ms_z_bus(3 downto 0) & '1' & ms_b_bus(2 downto 0);
+	elsif	(iorq = '0' and rd = '0' and adress(15 downto 0) = "1111101111011111") then
+		data <= ms_x_bus;	-- Port FBDF[11111011_11011111] = <X>
+	elsif (iorq = '0' and rd = '0' and adress(15 downto 0) = "1111111111011111") then
+		data <= ms_y_bus;  -- Port FFDF[11111111_11011111] = <Y>
 	else
 		Data <= "ZZZZZZZZ"; 
 end if; 
@@ -841,10 +857,20 @@ PORT MAP (
     AVR_RST => AVR_RST,
     AVR_DATA => AVR_DAT,
 	 -- OUTPUTS
-	 KB => kbus
+	 KB => kbus,
+	 MS_X => ms_x_bus,
+	 MS_Y => ms_y_bus,
+	 MS_Z => ms_z_bus,
+	 MS_BTNS => ms_b_bus
 );
 
 kbus_cs <= '0' when cs_fe='0' and rd='0' else '1';
---DBG <= kbus;
+
+ms_port_fadf <= '0' when	(iorq = '0' and rd = '0' and adress(15 downto 0) = "1111101011011111" and iorqge = '0') else '1'; -- Mouse Port FADF[11111010_11011111] = <Z>1<MB><LB><RB>
+ms_port_fbdf <= '0' when	(iorq = '0' and rd = '0' and adress(15 downto 0) = "1111101111011111" and iorqge = '0') else '1'; -- Port FBDF[11111011_11011111] = <X>
+ms_port_ffdf <= '0' when	(iorq = '0' and rd = '0' and adress(15 downto 0) = "1111111111011111" and iorqge = '0') else '1'; -- Port FFDF[11111111_11011111] = <Y>
+ms_port <= ms_port_fadf and ms_port_fbdf and ms_port_ffdf;
+
+
 
 end extend_arch;

@@ -13,15 +13,21 @@ entity cpld_kbd is
     KB          : out std_logic_vector(5 downto 0) := "111111";     -- data bus for kbd + extended bit (b6)
     AVR_CLK     : in std_logic;
     AVR_RST     : in std_logic;
-    AVR_DATA    : in std_logic
+    AVR_DATA    : in std_logic;
+	 
+	 MS_X 	 	: out std_logic_vector(7 downto 0);
+	 MS_Y 	 	: out std_logic_vector(7 downto 0);
+	 MS_BTNS 	 	: out std_logic_vector(2 downto 0);
+	 MS_Z 		: out std_logic_vector(3 downto 0)
 	);
     end cpld_kbd;
 architecture RTL of cpld_kbd is
 
-    -- 40 spectrum keyboard keys + 1 special bit b6
-    type kb_mem is  array( 0 to 40 ) of  std_logic;
+    -- 40 spectrum keyboard keys + 1 special bit b6 + 8 bit mouse x, 8 bit y, 3 bit btns, 1 bit change data flag
+    type kb_mem is  array( 0 to 64 ) of  std_logic;
     signal kb_data : kb_mem;
-    signal kb_addr : integer range 0 to 40;
+    signal kb_addr : integer range 0 to 64;
+	 signal ms_flag : std_logic := '0';
 
 begin
 
@@ -105,7 +111,39 @@ begin
 			else
 				KB <= "ZZZZZZ";
 			end if;
-					
+		
+			-- update mouse only on ms flag changed
+			if (ms_flag /= kb_data(64)) then 
+				MS_X(7) <= kb_data(48);
+				MS_X(6) <= kb_data(47);
+				MS_X(5) <= kb_data(46);
+				MS_X(4) <= kb_data(45);
+				MS_X(3) <= kb_data(44);
+				MS_X(2) <= kb_data(43);
+				MS_X(1) <= kb_data(42);
+				MS_X(0) <= kb_data(41);
+				
+				MS_Y(7) <= kb_data(56);
+				MS_Y(6) <= kb_data(55);
+				MS_Y(5) <= kb_data(54);
+				MS_Y(4) <= kb_data(53);
+				MS_Y(3) <= kb_data(52);
+				MS_Y(2) <= kb_data(51);
+				MS_Y(1) <= kb_data(50);
+				MS_Y(0) <= kb_data(49);
+				
+				MS_BTNS(2) <= kb_data(59);
+				MS_BTNS(1) <= kb_data(58);
+				MS_BTNS(0) <= kb_data(57);
+				
+				MS_Z(3) <= kb_data(63);
+				MS_Z(2) <= kb_data(62);
+				MS_Z(1) <= kb_data(61);
+				MS_Z(0) <= kb_data(60);
+				
+				ms_flag <= kb_data(64);
+			end if;
+		
 		end if;
 
 end process;
