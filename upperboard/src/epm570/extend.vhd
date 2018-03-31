@@ -92,9 +92,9 @@ dcd				:in std_logic;
 --ATM_PB4		:out std_logic := 'Z'; -- signal dlja chasov Profi
 
 --------------mega------------------
-AVR_CLK			: in std_logic := '0';
-AVR_DAT			: in std_logic := '0';
-AVR_RST 			: in std_logic := '0';
+AVR_CLK			: in std_logic := '1';
+AVR_DAT			: in std_logic := '1';
+AVR_RST 			: in std_logic := '1';
 INT1 				: in std_logic;
 
 ---------------HDD------------------
@@ -848,6 +848,9 @@ port map(
 );
 
 PS2_KBD: entity work.cpld_kbd
+GENERIC MAP (
+	OPEN_COLLECTOR => 1
+)
 PORT MAP (
         --INPUTS
 	 CLK => f14,

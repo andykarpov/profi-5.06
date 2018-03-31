@@ -424,11 +424,11 @@ void digitalWriteOK(int pin, int state)
   switch (state) {
     case HIGH:
       pinMode(pin, INPUT);
-      digitalWrite(pin, HIGH);
+      //digitalWrite(pin, HIGH);
     break;
     case LOW:
       pinMode(pin, OUTPUT);
-      digitalWrite(pin, LOW);
+      //digitalWrite(pin, LOW);
     break;
   }
 }
@@ -437,51 +437,62 @@ void digitalWriteOK(int pin, int state)
 // transmit matrix from AVR to CPLD side
 void transmit_matrix()
 {
-#if defined( __AVR_ATmega8515__ ) || defined( __AVR_ATmega162__ )
-    // using open collector transmission for mega8515
+/*#if defined( __AVR_ATmega8515__ ) || defined( __AVR_ATmega162__ )
 
     // reset the address
-    digitalWriteOK(PIN_AVR_RST, HIGH);
-    delayMicroseconds(1);
     digitalWriteOK(PIN_AVR_RST, LOW);
     delayMicroseconds(1);
+    digitalWriteOK(PIN_AVR_RST, HIGH);
+    delayMicroseconds(1);
 
     // transmit the matrix
     for(int i=0; i<ZX_MATRIX_SIZE; i++) {
-      digitalWriteOK(PIN_AVR_DAT, matrix[i]);
 
-      digitalWriteOK(PIN_AVR_CLK, HIGH);
-      delayMicroseconds(1);
+      // set key pressed
+      if (matrix[i]) {
+        digitalWriteOK(PIN_AVR_DAT, LOW);
+        delayMicroseconds(1);
+      }
+
+      // tick clk
       digitalWriteOK(PIN_AVR_CLK, LOW);
       delayMicroseconds(1);
+      digitalWriteOK(PIN_AVR_CLK, HIGH);
+
+      // revert data line to initial state
+      digitalWriteOK(PIN_AVR_DAT, HIGH);
+      delayMicroseconds(1);
     }
 
-    // low data line
-    digitalWriteOK(PIN_AVR_DAT, LOW);
+    // reset all to initial state
+    digitalWriteOK(PIN_AVR_DAT, HIGH);
+    digitalWriteOK(PIN_AVR_CLK, HIGH);
+    digitalWriteOK(PIN_AVR_RST, HIGH);
     delayMicroseconds(1);
-#else 
-    // normal transmission for Atmega328p
 
+#else */
     // reset the address
-    digitalWrite(PIN_AVR_RST, HIGH);
-    delayMicroseconds(1);
     digitalWrite(PIN_AVR_RST, LOW);
+    delayMicroseconds(1);
+    digitalWrite(PIN_AVR_RST, HIGH);
     delayMicroseconds(1);
 
     // transmit the matrix
     for(int i=0; i<ZX_MATRIX_SIZE; i++) {
-      digitalWrite(PIN_AVR_DAT, matrix[i]);
+      digitalWrite(PIN_AVR_DAT, !matrix[i]);
 
-      digitalWrite(PIN_AVR_CLK, HIGH);
-      delayMicroseconds(1);
       digitalWrite(PIN_AVR_CLK, LOW);
+      delayMicroseconds(1);
+      digitalWrite(PIN_AVR_CLK, HIGH);
       delayMicroseconds(1);
     }
 
-    // low data line
-    digitalWrite(PIN_AVR_DAT, LOW);
+    // reset all to initial state
+    digitalWrite(PIN_AVR_DAT, HIGH);
+    digitalWrite(PIN_AVR_CLK, HIGH);
+    digitalWrite(PIN_AVR_RST, HIGH);
     delayMicroseconds(1);
-#endif
+//#endif
 }
 
 // initial setup
@@ -504,12 +515,19 @@ void setup()
   pinMode(PIN_MOUSE_DAT, INPUT_PULLUP);
   
   // serial interface setup
+
+/*#if defined( __AVR_ATmega8515__ ) || defined( __AVR_ATmega162__ )
+    digitalWriteOK(PIN_AVR_CLK, HIGH);
+    digitalWriteOK(PIN_AVR_RST, HIGH);
+    digitalWriteOK(PIN_AVR_DAT, HIGH);
+#else*/
   pinMode(PIN_AVR_CLK, OUTPUT);
   pinMode(PIN_AVR_RST, OUTPUT);
   pinMode(PIN_AVR_DAT, OUTPUT);
-  digitalWrite(PIN_AVR_CLK, LOW);
-  digitalWrite(PIN_AVR_RST, LOW);
-  digitalWrite(PIN_AVR_DAT, LOW);
+  digitalWrite(PIN_AVR_CLK, HIGH);
+  digitalWrite(PIN_AVR_RST, HIGH);
+  digitalWrite(PIN_AVR_DAT, HIGH);
+//#endif
 
   pinMode(PIN_RESET, OUTPUT);
   digitalWrite(PIN_RESET, HIGH);

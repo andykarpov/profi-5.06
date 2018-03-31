@@ -4,6 +4,9 @@ use IEEE.std_logic_arith.conv_integer;
 use IEEE.numeric_std.all;
 
 entity cpld_kbd is
+	generic 
+	(
+		OPEN_COLLECTOR: integer);
 	port
 	(
 	 CLK			 : in std_logic;
@@ -44,21 +47,41 @@ begin
 process( AVR_CLK, AVR_DATA, AVR_RST)
 begin
 
-    if (AVR_RST = '1') then
-      kb_addr <= 0;
-    else
+	-- open collector transmission (active 0)
+	if (OPEN_COLLECTOR = 1) then 
+		 if (AVR_RST = '0') then
+			kb_addr <= 0;
+		 else
 
-	    if ( rising_edge( AVR_CLK )) then
-		    -- read the key status from the micro-controller
-		    -- if the bit is '1' that means the key is pressed
-                    kb_data( conv_integer(kb_addr)  ) <=  AVR_DATA;
-	    end if;
+			 if ( falling_edge( AVR_CLK )) then
+				 -- read the key status from the micro-controller
+				 -- if the bit is '0' that means the key is pressed
+							  kb_data( conv_integer(kb_addr)  ) <=  not(AVR_DATA);
+			 end if;
 
-	    if ( falling_edge( AVR_CLK )) then
-		    -- increment the pointer
-		    kb_addr <= kb_addr + 1;
-	    end if;
-    end if;
+			 if ( rising_edge( AVR_CLK )) then
+				 -- increment the pointer
+				 kb_addr <= kb_addr + 1;
+			 end if;
+		 end if;
+	-- normal transmission (active 1)
+	else
+		 if (AVR_RST = '1') then
+			kb_addr <= 0;
+		 else
+
+			 if ( rising_edge( AVR_CLK )) then
+				 -- read the key status from the micro-controller
+				 -- if the bit is '1' that means the key is pressed
+							  kb_data( conv_integer(kb_addr)  ) <=  AVR_DATA;
+			 end if;
+
+			 if ( falling_edge( AVR_CLK )) then
+				 -- increment the pointer
+				 kb_addr <= kb_addr + 1;
+			 end if;
+		 end if;
+	end if;
 end process;
 --    
 process( kb_data, A, CLK)
