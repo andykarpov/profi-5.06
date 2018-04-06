@@ -15,7 +15,7 @@
 
 #define DEBUG_MODE 0
 
-#if defined( __AVR_ATmega328P__ ) || defined( __AVR_ATmega328__ ) || defined( __AVR_ATmega168__ ) || defined( __AVR_ATmega88__) || defined( __AVR_ATmega48__) || defined ( __AVR_ATmega8__ )
+#if defined( __AVR_ATmega328P__ ) || defined( __AVR_ATmega328__ ) || defined( __AVR_ATmega168__ ) || defined( __AVR_ATmega88__) || defined ( __AVR_ATmega8__ )
 
 // ---- Pins for Atmega328 / 168 / 88 / 48 / 8 ----
 #define PIN_KBD_CLK 2 // pin 28 (CLKK)
