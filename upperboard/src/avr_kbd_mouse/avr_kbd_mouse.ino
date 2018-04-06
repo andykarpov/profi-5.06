@@ -4,8 +4,10 @@
  * 
  * Designed to build on Arduino IDE.
  * Atmega8515 code required MajorCore support to be installed https://github.com/MCUdude/MajorCore
+ * Atmega8/48/88/168 code required MiniCore support to be installed https://github.com/MCUdude/MiniCore
  * 
  * @author Andy Karpov <andy.karpov@gmail.com>
+ * Ukraine, 2018
  */
 
 #include "ps2.h"
