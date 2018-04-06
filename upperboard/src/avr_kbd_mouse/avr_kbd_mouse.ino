@@ -15,9 +15,9 @@
 
 #define DEBUG_MODE 0
 
-#if defined( __AVR_ATmega328P__ ) || defined( __AVR_ATmega328__ )
+#if defined( __AVR_ATmega328P__ ) || defined( __AVR_ATmega328__ ) || defined( __AVR_ATmega168__ ) || defined( __AVR_ATmega88__) || defined( __AVR_ATmega48__) || defined ( __AVR_ATmega8__ )
 
-// ---- Pins for Atmega328 ----
+// ---- Pins for Atmega328 / 168 / 88 / 48 / 8 ----
 #define PIN_KBD_CLK 2 // pin 28 (CLKK)
 #define PIN_KBD_DAT 4 // pin 27 (DATK)
 
@@ -34,8 +34,8 @@
 
 #elif defined( __AVR_ATmega8515__ ) || defined( __AVR_ATmega162__ )
 
-// ---- Pins for Atmega8515 ----
-// Profi upper board modifications:
+// ---- Pins for Atmega8515 / 162 ----
+// Profi 5.06 upper board modifications:
 // 1) replace crystal with 16MHz
 // 2) add wire between D34:28 and D34:13
 // 3) add level shifters to pins 14,15,5 to translate 5v to 3.3v signals (TODO)
@@ -54,6 +54,10 @@
 #define PIN_RESET 0 // pin 1 (/RESET)
 #define PIN_TURBO 2 //  pin 3 (/TURBO)
 #define PIN_MAGIC 1 //  pin 2 (ATM_/MAGIC)
+
+#else
+
+#error "Unsupported board!!!"
 
 #endif
 
@@ -437,7 +441,7 @@ void digitalWriteOK(int pin, int state)
 // transmit matrix from AVR to CPLD side
 void transmit_matrix()
 {
-/*#if defined( __AVR_ATmega8515__ ) || defined( __AVR_ATmega162__ )
+#if defined( __AVR_ATmega8515__ ) || defined( __AVR_ATmega162__ )
 
     // reset the address
     digitalWriteOK(PIN_AVR_RST, LOW);
@@ -447,20 +451,11 @@ void transmit_matrix()
 
     // transmit the matrix
     for(int i=0; i<ZX_MATRIX_SIZE; i++) {
+      digitalWriteOK(PIN_AVR_DAT, !matrix[i]);
 
-      // set key pressed
-      if (matrix[i]) {
-        digitalWriteOK(PIN_AVR_DAT, LOW);
-        delayMicroseconds(1);
-      }
-
-      // tick clk
       digitalWriteOK(PIN_AVR_CLK, LOW);
       delayMicroseconds(1);
       digitalWriteOK(PIN_AVR_CLK, HIGH);
-
-      // revert data line to initial state
-      digitalWriteOK(PIN_AVR_DAT, HIGH);
       delayMicroseconds(1);
     }
 
@@ -470,7 +465,7 @@ void transmit_matrix()
     digitalWriteOK(PIN_AVR_RST, HIGH);
     delayMicroseconds(1);
 
-#else */
+#else 
     // reset the address
     digitalWrite(PIN_AVR_RST, LOW);
     delayMicroseconds(1);
@@ -492,7 +487,7 @@ void transmit_matrix()
     digitalWrite(PIN_AVR_CLK, HIGH);
     digitalWrite(PIN_AVR_RST, HIGH);
     delayMicroseconds(1);
-//#endif
+#endif
 }
 
 // initial setup
@@ -500,7 +495,22 @@ void setup()
 {
 #if DEBUG_MODE
     Serial.begin(115200);
-    Serial.println(F("ZX Keyboard v1.0"));
+    Serial.println(F("ZX Keyboard / mouse controller v1.0"));
+#if defined(__AVR_ATmega8515__)
+    Serial.println(F("Atmega 8515"));
+#elif defined(__AVR_ATmega162__)
+    Serial.println(F("Atmega 162"));
+#elif defined(__AVR_ATmega328__)
+    Serial.println(F("Atmega 328"));
+#elif defined(__AVR_ATmega168__)
+    Serial.println(F("Atmega 168"));
+#elif defined(__AVR_ATmega88__)
+    Serial.println(F("Atmega 88"));
+#elif defined(__AVR_ATmega48__)
+    Serial.println(F("Atmega 48"));
+#elif defined(__AVR_ATmega8__)
+    Serial.println(F("Atmega 8"));
+#endif
 #endif
 
 // 8515 trick to use INT1 pin to edge detect, that is not allowed on INT2 pin
@@ -516,18 +526,18 @@ void setup()
   
   // serial interface setup
 
-/*#if defined( __AVR_ATmega8515__ ) || defined( __AVR_ATmega162__ )
+#if defined( __AVR_ATmega8515__ ) || defined( __AVR_ATmega162__ )
     digitalWriteOK(PIN_AVR_CLK, HIGH);
     digitalWriteOK(PIN_AVR_RST, HIGH);
     digitalWriteOK(PIN_AVR_DAT, HIGH);
-#else*/
+#else
   pinMode(PIN_AVR_CLK, OUTPUT);
   pinMode(PIN_AVR_RST, OUTPUT);
   pinMode(PIN_AVR_DAT, OUTPUT);
   digitalWrite(PIN_AVR_CLK, HIGH);
   digitalWrite(PIN_AVR_RST, HIGH);
   digitalWrite(PIN_AVR_DAT, HIGH);
-//#endif
+#endif
 
   pinMode(PIN_RESET, OUTPUT);
   digitalWrite(PIN_RESET, HIGH);
@@ -543,8 +553,19 @@ void setup()
       matrix[i] = false;
   }
 
+#if DEBUG_MODE
+  Serial.println(F("Keyboard init..."));
+#endif
+
   kbd.begin(PIN_KBD_DAT, PIN_KBD_CLK);
+
+#if DEBUG_MODE
+  Serial.println(F("done"));
+  Serial.println(F("Mouse init..."));
+#endif
+  
   mouse_present = mouse.initialize();
+  
 #if DEBUG_MODE
   if (!mouse_present) {
     Serial.println(F("Mouse does not exists"));
@@ -559,7 +580,10 @@ void loop()
 {
   if (kbd.available()) {
     int c = kbd.read();
-    //Serial.println(c, HEX);
+#if DEBUG_MODE    
+    Serial.print(F("Scancode: "));
+    Serial.println(c, HEX);
+#endif
     fill_kbd_matrix(c);
   }
 
@@ -602,6 +626,7 @@ void loop()
     t = n;
 
 #if DEBUG_MODE
+    Serial.print(F("Mouse: "));
     Serial.print(m.status, BIN);
     Serial.print(F("\tx="));
     Serial.print(m.position.x);
