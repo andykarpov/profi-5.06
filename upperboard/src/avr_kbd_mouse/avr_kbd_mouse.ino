@@ -15,7 +15,7 @@
 #include "ps2_codes.h"
 #include "ps2mouse.h"
 
-#define DEBUG_MODE 0
+#define DEBUG_MODE 1
 
 #if defined( __AVR_ATmega328P__ ) || defined( __AVR_ATmega328__ ) || defined( __AVR_ATmega168__ ) || defined( __AVR_ATmega88__) || defined ( __AVR_ATmega8__ )
 
@@ -33,6 +33,15 @@
 #define PIN_RESET 10 // pin 1 (/RESET)
 #define PIN_TURBO 9 //  pin 3 (/TURBO)
 #define PIN_MAGIC 8 //  pin 2 (ATM_/MAGIC)
+
+#define PIN_SDA A4 // pin 23 
+#define PIN_SCL A5 // ping 24
+
+#define PIN_IRX 0 // pin 10
+#define PIN_OTX 1 // pin 11
+
+#define PIN_ICTS A1 // pin 22
+#define PIN_ORTS A0 // pin 21
 
 #elif defined( __AVR_ATmega8515__ ) || defined( __AVR_ATmega162__ )
 
@@ -57,6 +66,15 @@
 #define PIN_TURBO 2 //  pin 3 (/TURBO)
 #define PIN_MAGIC 1 //  pin 2 (ATM_/MAGIC)
 
+#define PIN_SDA 18 // pin 23 
+#define PIN_SCL 19 // ping 24
+
+#define PIN_IRX 8 // pin 10
+#define PIN_OTX 9 // pin 11
+
+#define PIN_ICTS 17 // pin 22
+#define PIN_ORTS 16 // pin 21
+
 #else
 
 #error "Unsupported board!!!"
@@ -70,7 +88,9 @@ bool matrix[ZX_MATRIX_SIZE]; // matrix of pressed keys + mouse reports to be tra
 bool profi_mode = true; // false = zx spectrum mode (switched by PrtSrc button in run-time)
 bool is_turbo = false; // turbo toggle (switched by ScrollLock button)
 bool mouse_present = false; // mouse present flag (detected by signal change on CLKM pin)
-long t = 0;
+unsigned long t = 0;
+unsigned long tm = 0;
+int mouse_tries = 5;
 
 // transform PS/2 scancodes into internal matrix of pressed keys
 void fill_kbd_matrix(int sc)
@@ -492,6 +512,20 @@ void transmit_matrix()
 #endif
 }
 
+void init_mouse()
+{
+    mouse_present = mouse.initialize();
+  
+#if DEBUG_MODE
+  if (!mouse_present) {
+    Serial.println(F("Mouse does not exists"));
+  } else {
+    Serial.println(F("Mouse present"));
+  }
+#endif
+
+}
+
 // initial setup
 void setup()
 {
@@ -565,16 +599,9 @@ void setup()
   Serial.println(F("done"));
   Serial.println(F("Mouse init..."));
 #endif
+
+init_mouse();
   
-  mouse_present = mouse.initialize();
-  
-#if DEBUG_MODE
-  if (!mouse_present) {
-    Serial.println(F("Mouse does not exists"));
-  } else {
-    Serial.println(F("Mouse present"));
-  }
-#endif
 }
 
 // main loop
@@ -589,7 +616,14 @@ void loop()
     fill_kbd_matrix(c);
   }
 
-  long n = millis();
+  unsigned long n = millis();
+
+  // try to re-init mouse every 5s if not present, up to 5 tries
+  if (mouse_tries > 0 && !mouse_present && n - tm > 5000) {
+    mouse_tries--;
+    init_mouse();
+    tm = n;
+  }
 
   // polling for mouse data every 100ms
   if (mouse_present && n - t > 100) {
