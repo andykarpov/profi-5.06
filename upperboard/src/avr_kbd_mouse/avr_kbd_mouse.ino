@@ -25,6 +25,7 @@
 
 // 13,12,11 - hardware SPI
 #define PIN_SS 7 // SPI slave select
+#define PIN_BUSY 6 // Busy LED
 
 #define PIN_RESET 10 // pin 1 (/RESET)
 #define PIN_TURBO 9 //  pin 3 (/TURBO)
@@ -49,6 +50,7 @@ bool is_turbo = false; // turbo toggle (switched by ScrollLock button)
 bool mouse_present = false; // mouse present flag (detected by signal change on CLKM pin)
 unsigned long t = 0;
 unsigned long tm = 0;
+unsigned long tl = 0;
 int mouse_tries = 5;
 
 uint8_t mouse_x = 0;
@@ -504,6 +506,9 @@ void setup()
   pinMode(PIN_SS, OUTPUT);
   digitalWrite(PIN_SS, HIGH);
 
+  pinMode(PIN_BUSY, OUTPUT);
+  digitalWrite(PIN_BUSY, LOW);
+
   // ps/2
 
   pinMode(PIN_KBD_CLK, INPUT_PULLUP);
@@ -553,8 +558,11 @@ init_mouse();
 // main loop
 void loop()
 {
+  digitalWrite(PIN_BUSY, LOW);
+  
   if (kbd.available()) {
     int c = kbd.read();
+    digitalWrite(PIN_BUSY, HIGH);
 #if DEBUG_MODE    
     Serial.print(F("Scancode: "));
     Serial.println(c, HEX);
