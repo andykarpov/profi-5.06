@@ -92,9 +92,9 @@ dcd				:in std_logic;
 --ATM_PB4		:out std_logic := 'Z'; -- signal dlja chasov Profi
 
 --------------mega------------------
-AVR_CLK			: in std_logic; -- MOSI
-AVR_DAT			: in std_logic; -- SCK
-AVR_RST 			: out std_logic; -- MISO
+AVR_MOSI			: in std_logic; -- MOSI
+AVR_SCK			: in std_logic; -- SCK
+AVR_MISO 		: out std_logic; -- MISO
 AVR_SS 			: in std_logic; -- SS
 INT1 				: in std_logic;
 
@@ -855,9 +855,9 @@ PORT MAP (
 	 N_RESET => res,
 	 N_CS => kbus_cs,
     A => Adress(15 downto 8), -- address bus for kbd
-    AVR_CLK => AVR_CLK,
-    AVR_RST => AVR_RST,
-    AVR_DATA => AVR_DAT,
+    AVR_MOSI => AVR_MOSI,
+    AVR_SCK => AVR_SCK,
+    AVR_MISO => AVR_MISO,
 	 AVR_SS => AVR_SS,
 	 -- OUTPUTS
 	 KB => kbus,

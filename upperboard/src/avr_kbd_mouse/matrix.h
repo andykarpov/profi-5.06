@@ -25,8 +25,8 @@
 
 // Key position in output array
 
-#define ZX_MATRIX_SIZE 65 // 40 keys + bit6 + 8bit mouse x + 8 bit mouse y + 3 mouse buttons + wheel data + flag
-//#define ZX_MATRIX_SIZE 41 // only 40 keys + bit6
+//#define ZX_MATRIX_SIZE 65 // 40 keys + bit6 + 8bit mouse x + 8 bit mouse y + 3 mouse buttons + wheel data + flag
+#define ZX_MATRIX_SIZE 41 // only 40 keys + bit6
 
 #define ZX_K_CS  0
 #define ZX_K_A   1
@@ -72,39 +72,18 @@
 // Fn keys ext bit
 #define ZX_K_BIT6  40
 
-// Mouse delta X
-#define ZX_M_X0  41
-#define ZX_M_X1  42
-#define ZX_M_X2  43
-#define ZX_M_X3  44
-#define ZX_M_X4  45
-#define ZX_M_X5  46
-#define ZX_M_X6  47
-#define ZX_M_X7  48
+// kbd commands
+#define CMD_KBD_BYTE1 0x01
+#define CMD_KBD_BYTE2 0x02
+#define CMD_KBD_BYTE3 0x03
+#define CMD_KBD_BYTE4 0x04
+#define CMD_KBD_BYTE5 0x05
+#define CMD_KBD_BYTE6 0x06
 
-// Mouse delta Y
-#define ZX_M_Y0  49
-#define ZX_M_Y1  50
-#define ZX_M_Y2  51
-#define ZX_M_Y3  52
-#define ZX_M_Y4  53
-#define ZX_M_Y5  54
-#define ZX_M_Y6  55
-#define ZX_M_Y7  56
-
-// Mouse btns
-#define ZX_M_B1  57
-#define ZX_M_B2  58
-#define ZX_M_B3  59
-
-// Mouse wheel
-#define ZX_M_S0  60
-#define ZX_M_S1  61
-#define ZX_M_S2  62
-#define ZX_M_S3  63
-
-// Mouse packet state
-#define ZX_M_NEW_PACKET 64
+// mouse commands
+#define CMD_MOUSE_X 0x0A
+#define CMD_MOUSE_Y 0x0B
+#define CMD_MOUSE_Z 0x0C
 
 #endif
 

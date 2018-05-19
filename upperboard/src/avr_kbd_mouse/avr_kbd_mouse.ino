@@ -23,6 +23,7 @@
 #define PIN_MOUSE_CLK 3 // pin 26 (CLKM)
 #define PIN_MOUSE_DAT 5 // pin 25 (DATM)
 
+// 13,12,11 - hardware SPI
 #define PIN_SS 7 // SPI slave select
 
 #define PIN_RESET 10 // pin 1 (/RESET)
@@ -49,6 +50,14 @@ bool mouse_present = false; // mouse present flag (detected by signal change on 
 unsigned long t = 0;
 unsigned long tm = 0;
 int mouse_tries = 5;
+
+uint8_t mouse_x = 0;
+uint8_t mouse_y = 0;
+uint8_t mouse_z = 0;
+uint8_t mouse_btns = 0;
+bool mouse_new_packet = false;
+
+SPISettings settingsA(8000000, MSBFIRST, SPI_MODE0);
 
 // transform PS/2 scancodes into internal matrix of pressed keys
 void fill_kbd_matrix(int sc)
@@ -414,21 +423,63 @@ uint8_t get_matrix_byte(uint8_t pos)
   return result;
 }
 
-// transmit matrix from AVR to CPLD side via SPI
-void transmit_matrix()
+// transmit keyboard matrix from AVR to CPLD side via SPI
+void transmit_keyboard_matrix()
 {
-    SPISettings settingsA(8000000, MSBFIRST, SPI_MODE0);
-    uint8_t bytes = 9; //ZX_MATRIX_SIZE/8;
+    uint8_t bytes = 6;
     for (uint8_t i=0; i<bytes; i++) {
       uint8_t data = get_matrix_byte(i);
       SPI.beginTransaction(settingsA);
       digitalWrite(PIN_SS, LOW);
-      uint8_t cmd = SPI.transfer(i+1); // command
+      uint8_t cmd = SPI.transfer(i+1); // command (1...6)
       uint8_t res = SPI.transfer(data); // data byte
-      // TODO: process cmd and res (for i2c clock setting, etc) from spi slave (CPLD)
       digitalWrite(PIN_SS, HIGH);
       SPI.endTransaction();
+      if (cmd > 0) {
+        process_in_cmd(cmd, res);
+      }
     }
+}
+
+void transmit_mouse_data()
+{
+  uint8_t cmd = 0;
+  uint8_t res = 0;
+
+  SPI.beginTransaction(settingsA);
+  digitalWrite(PIN_SS, LOW);
+  cmd = SPI.transfer(CMD_MOUSE_X); // command (0x0A)
+  res = SPI.transfer(mouse_x);     // X coord
+  digitalWrite(PIN_SS, HIGH);
+  SPI.endTransaction();
+  if (cmd > 0) {
+    process_in_cmd(cmd, res);
+  }
+
+  SPI.beginTransaction(settingsA);
+  digitalWrite(PIN_SS, LOW);
+  cmd = SPI.transfer(CMD_MOUSE_Y); // command (0x0B)
+  res = SPI.transfer(mouse_y);     // Y coord
+  digitalWrite(PIN_SS, HIGH);
+  SPI.endTransaction();
+  if (cmd > 0) {
+    process_in_cmd(cmd, res);
+  }
+
+  SPI.beginTransaction(settingsA);
+  digitalWrite(PIN_SS, LOW);
+  cmd = SPI.transfer(CMD_MOUSE_Z); // command (0x0C)
+  res = SPI.transfer(mouse_z);     // Z coord + buttons
+  digitalWrite(PIN_SS, HIGH);
+  SPI.endTransaction();
+  if (cmd > 0) {
+        process_in_cmd(cmd, res);
+  }  
+}
+
+void process_in_cmd(uint8_t cmd, uint8_t data)
+{
+  // TODO
 }
 
 void init_mouse()
@@ -511,6 +562,9 @@ void loop()
     fill_kbd_matrix(c);
   }
 
+  // transmit kbd always
+  transmit_keyboard_matrix();
+
   unsigned long n = millis();
 
   // try to re-init mouse every 5s if not present, up to 5 tries
@@ -525,34 +579,21 @@ void loop()
 
     MouseData m = mouse.readData();
 
-    matrix[ZX_M_X0] = bitRead(m.position.x, 0);
-    matrix[ZX_M_X1] = bitRead(m.position.x, 1);
-    matrix[ZX_M_X2] = bitRead(m.position.x, 2);
-    matrix[ZX_M_X3] = bitRead(m.position.x, 3);
-    matrix[ZX_M_X4] = bitRead(m.position.x, 4);
-    matrix[ZX_M_X5] = bitRead(m.position.x, 5);
-    matrix[ZX_M_X6] = bitRead(m.position.x, 6);
-    matrix[ZX_M_X7] = bitRead(m.position.x, 7);
+    mouse_new_packet = !mouse_new_packet;
+    mouse_x = m.position.x;
+    mouse_y = m.position.y;
+    mouse_z = m.wheel;
 
-    matrix[ZX_M_Y0] = bitRead(m.position.y, 0);
-    matrix[ZX_M_Y1] = bitRead(m.position.y, 1);
-    matrix[ZX_M_Y2] = bitRead(m.position.y, 2);
-    matrix[ZX_M_Y3] = bitRead(m.position.y, 3);
-    matrix[ZX_M_Y4] = bitRead(m.position.y, 4);
-    matrix[ZX_M_Y5] = bitRead(m.position.y, 5);
-    matrix[ZX_M_Y6] = bitRead(m.position.y, 6);
-    matrix[ZX_M_Y7] = bitRead(m.position.y, 7);
+    bool btn1 = bitRead(m.status, 0);
+    bool btn2 = bitRead(m.status, 1);
+    bool btn3 = bitRead(m.status, 2);    
+    bitWrite(mouse_z, 4, btn1);
+    bitWrite(mouse_z, 5, btn2);
+    bitWrite(mouse_z, 6, btn3);
+    bitWrite(mouse_z, 7, mouse_new_packet);
 
-    matrix[ZX_M_B1] = bitRead(m.status, 0);
-    matrix[ZX_M_B2] = bitRead(m.status, 1);
-    matrix[ZX_M_B3] = bitRead(m.status, 2);
-
-    matrix[ZX_M_S0] = bitRead(m.wheel, 0);
-    matrix[ZX_M_S1] = bitRead(m.wheel, 1);
-    matrix[ZX_M_S2] = bitRead(m.wheel, 2);
-    matrix[ZX_M_S3] = bitRead(m.wheel, 3);
-
-    matrix[ZX_M_NEW_PACKET] = !matrix[ZX_M_NEW_PACKET];
+    // transmit mouse only if present, every 100ms
+    transmit_mouse_data();
 
     t = n;
 
@@ -570,7 +611,5 @@ void loop()
 
   }
   
-  // transmit
-  transmit_matrix();
 }
 

@@ -11,9 +11,9 @@ entity cpld_kbd is
 	 N_CS			 : in std_logic := '1';
     A           : in std_logic_vector(15 downto 8);     -- address bus for kbd
     KB          : out std_logic_vector(5 downto 0) := "111111";     -- data bus for kbd + extended bit (b6)
-    AVR_CLK     : in std_logic;
-    AVR_RST     : out std_logic;
-    AVR_DATA    : in std_logic;
+    AVR_MOSI    : in std_logic;
+    AVR_MISO    : out std_logic;
+    AVR_SCK     : in std_logic;
 	 AVR_SS 		 : in std_logic;
 	 
 	 MS_X 	 	: out std_logic_vector(7 downto 0);
@@ -25,10 +25,16 @@ entity cpld_kbd is
 architecture RTL of cpld_kbd is
 
 	 -- keyboard state
-	 signal kb_data : std_logic_vector(64 downto 0); -- 40 keys + bit6 + mouse data
+	 signal kb_data : std_logic_vector(40 downto 0) := (others => '0'); -- 40 keys + bit6
 	 signal ms_flag : std_logic := '0';
 	 
 	 -- mouse
+	 signal mouse_x : signed(7 downto 0);
+	 signal mouse_y : signed(7 downto 0);
+	 signal mouse_z : signed(3 downto 0);
+	 signal buttons   : std_logic_vector(2 downto 0);
+	 signal newPacket : std_logic := '0';
+
 	 signal currentX 	: unsigned(7 downto 0);
 	 signal currentY 	: unsigned(7 downto 0);
 	 signal cursorX 		: signed(7 downto 0) := X"7F";
@@ -50,10 +56,10 @@ U_SPI: entity work.spi_slave
     )
     port map(
         clk_i          => CLK,
-        spi_sck_i      => AVR_DATA,
+        spi_sck_i      => AVR_SCK,
         spi_ssel_i     => AVR_SS,
-        spi_mosi_i     => AVR_CLK,
-        spi_miso_o     => AVR_RST,
+        spi_mosi_i     => AVR_MOSI,
+        spi_miso_o     => AVR_MISO,
 
         di_req_o       => open,
         di_i           => (others => '0'),
@@ -74,17 +80,21 @@ begin
 	if (rising_edge(CLK)) then
 		if (spi_do_valid = '1') then 
 			case spi_do(15 downto 8) is 
+
+				-- keyboard matrix
 				when X"01" => kb_data(7 downto 0) <= spi_do (7 downto 0);
 				when X"02" => kb_data(15 downto 8) <= spi_do (7 downto 0);
 				when X"03" => kb_data(23 downto 16) <= spi_do (7 downto 0);
 				when X"04" => kb_data(31 downto 24) <= spi_do (7 downto 0);
 				when X"05" => kb_data(39 downto 32) <= spi_do (7 downto 0);
-				when X"06" => kb_data(47 downto 40) <= spi_do (7 downto 0);
-				when X"07" => kb_data(55 downto 48) <= spi_do (7 downto 0);
-				when X"08" => kb_data(63 downto 56) <= spi_do (7 downto 0);
-				when X"09" => kb_data(64) <= spi_do (0);
+				when X"06" => kb_data(40) <= spi_do (0);
+
+				-- mouse data
+				when X"0A" => mouse_x(7 downto 0) <= signed(spi_do(7 downto 0));
+				when X"0B" => mouse_y(7 downto 0) <= signed(spi_do(7 downto 0));
+				when X"0C" => mouse_z(3 downto 0) <= signed(spi_do(3 downto 0)); buttons(2 downto 0) <= spi_do(6 downto 4); newPacket <= spi_do(7);				
 				when others => 
-			end case;
+			end case;	
 		end if;
 	end if;
 end process;		  
@@ -153,35 +163,14 @@ begin
 		if (rising_edge(CLK)) then
 			trigger <= '0';
 			-- update mouse only on ms flag changed
-			if (ms_flag /= kb_data(64)) then 
-				deltaX(7) <= kb_data(48);
-				deltaX(6) <= kb_data(47);
-				deltaX(5) <= kb_data(46);
-				deltaX(4) <= kb_data(45);
-				deltaX(3) <= kb_data(44);
-				deltaX(2) <= kb_data(43);
-				deltaX(1) <= kb_data(42);
-				deltaX(0) <= kb_data(41);
-				
-				deltaY(7) <= kb_data(56);
-				deltaY(6) <= kb_data(55);
-				deltaY(5) <= kb_data(54);
-				deltaY(4) <= kb_data(53);
-				deltaY(3) <= kb_data(52);
-				deltaY(2) <= kb_data(51);
-				deltaY(1) <= kb_data(50);
-				deltaY(0) <= kb_data(49);
-				
-				deltaZ(3) <= kb_data(63);
-				deltaZ(2) <= kb_data(62);
-				deltaZ(1) <= kb_data(61);
-				deltaZ(0) <= kb_data(60);
-				
-				MS_BTNS(2) <= not(kb_data(59));
-				MS_BTNS(1) <= not(kb_data(58));
-				MS_BTNS(0) <= not(kb_data(57));
-				
-				ms_flag <= kb_data(64);
+			if (ms_flag /= newPacket) then 
+				deltaX(7 downto 0) <= mouse_x(7 downto 0);
+				deltaY(7 downto 0) <= mouse_y(7 downto 0);
+				deltaZ(3 downto 0) <= mouse_z(3 downto 0);
+				MS_BTNS(2) <= not(buttons(2));
+				MS_BTNS(1) <= not(buttons(1));
+				MS_BTNS(0) <= not(buttons(0));				
+				ms_flag <= newPacket;
 				trigger <= '1';
 			end if;
 		end if;
