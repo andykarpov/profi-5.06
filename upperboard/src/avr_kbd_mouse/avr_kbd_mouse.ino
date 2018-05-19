@@ -3,8 +3,6 @@
  * Atmega8515 replacement on Atmega328p :)
  * 
  * Designed to build on Arduino IDE.
- * Atmega8515 code required MajorCore support to be installed https://github.com/MCUdude/MajorCore
- * Atmega8/48/88/168 code required MiniCore support to be installed https://github.com/MCUdude/MiniCore
  * 
  * @author Andy Karpov <andy.karpov@gmail.com>
  * Ukraine, 2018
@@ -14,21 +12,18 @@
 #include "matrix.h"
 #include "ps2_codes.h"
 #include "ps2mouse.h"
+#include <SPI.h>
 
-#define DEBUG_MODE 1
+#define DEBUG_MODE 0
 
-#if defined( __AVR_ATmega328P__ ) || defined( __AVR_ATmega328__ ) || defined( __AVR_ATmega168__ ) || defined( __AVR_ATmega88__) || defined ( __AVR_ATmega8__ )
-
-// ---- Pins for Atmega328 / 168 / 88 / 48 / 8 ----
+// ---- Pins for Atmega328
 #define PIN_KBD_CLK 2 // pin 28 (CLKK)
 #define PIN_KBD_DAT 4 // pin 27 (DATK)
 
 #define PIN_MOUSE_CLK 3 // pin 26 (CLKM)
 #define PIN_MOUSE_DAT 5 // pin 25 (DATM)
 
-#define PIN_AVR_CLK 11 // pin 14 (ATM_ADR0 - CPLD PIN 102)
-#define PIN_AVR_RST 12 // pin 5 (ATM_PB4 - CPLD PIN 123)
-#define PIN_AVR_DAT 13 // pin 15 (ATM_ADD1 - CPLD PIN 103)
+#define PIN_SS 7 // SPI slave select
 
 #define PIN_RESET 10 // pin 1 (/RESET)
 #define PIN_TURBO 9 //  pin 3 (/TURBO)
@@ -43,43 +38,6 @@
 #define PIN_ICTS A1 // pin 22
 #define PIN_ORTS A0 // pin 21
 
-#elif defined( __AVR_ATmega8515__ ) || defined( __AVR_ATmega162__ )
-
-// ---- Pins for Atmega8515 / 162 ----
-// Profi 5.06 upper board modifications:
-// 1) replace crystal with 16MHz
-// 2) add wire between D34:28 and D34:13
-// 3) add level shifters to pins 14,15,5 to translate 5v to 3.3v signals (TODO)
-
-#define PIN_KBD_CLK_ORIG 23 // pin 28 (CLKK)
-#define PIN_KBD_CLK 11 // pin 13 must be connected to pin 28.
-#define PIN_KBD_DAT 22 // pin 27 (DATK)
-
-#define PIN_MOUSE_CLK 21 // pin 26 (CLKM)
-#define PIN_MOUSE_DAT 20 // pin 25 (DATM)
-
-#define PIN_AVR_CLK 12 // pin 14 (ATM_ADR0 - CPLD PIN 102)
-#define PIN_AVR_RST 4 // pin 5 (ATM_PB4 - CPLD PIN 123)
-#define PIN_AVR_DAT 13 // pin 15 (ATM_ADD1 - CPLD PIN 103)
-
-#define PIN_RESET 0 // pin 1 (/RESET)
-#define PIN_TURBO 2 //  pin 3 (/TURBO)
-#define PIN_MAGIC 1 //  pin 2 (ATM_/MAGIC)
-
-#define PIN_SDA 18 // pin 23 
-#define PIN_SCL 19 // ping 24
-
-#define PIN_IRX 8 // pin 10
-#define PIN_OTX 9 // pin 11
-
-#define PIN_ICTS 17 // pin 22
-#define PIN_ORTS 16 // pin 21
-
-#else
-
-#error "Unsupported board!!!"
-
-#endif
 
 PS2KeyRaw kbd;
 PS2Mouse mouse(PIN_MOUSE_CLK, PIN_MOUSE_DAT);
@@ -444,72 +402,33 @@ void fill_kbd_matrix(int sc)
    }
 }
 
-// digital write with open collector, for mega8515 and mega162
-void digitalWriteOK(int pin, int state)
+uint8_t get_matrix_byte(uint8_t pos)
 {
-  switch (state) {
-    case HIGH:
-      pinMode(pin, INPUT);
-      //digitalWrite(pin, HIGH);
-    break;
-    case LOW:
-      pinMode(pin, OUTPUT);
-      //digitalWrite(pin, LOW);
-    break;
+  uint8_t result = 0;
+  for (uint8_t i=0; i<8; i++) {
+    uint8_t k = pos*8 + i;
+    if (k < ZX_MATRIX_SIZE) {
+      bitWrite(result, i, matrix[k]);
+    }
   }
+  return result;
 }
 
-
-// transmit matrix from AVR to CPLD side
+// transmit matrix from AVR to CPLD side via SPI
 void transmit_matrix()
 {
-#if defined( __AVR_ATmega8515__ ) || defined( __AVR_ATmega162__ )
-
-    // reset the address
-    digitalWriteOK(PIN_AVR_RST, LOW);
-    delayMicroseconds(1);
-    digitalWriteOK(PIN_AVR_RST, HIGH);
-    delayMicroseconds(1);
-
-    // transmit the matrix
-    for(int i=0; i<ZX_MATRIX_SIZE; i++) {
-      digitalWriteOK(PIN_AVR_DAT, !matrix[i]);
-
-      digitalWriteOK(PIN_AVR_CLK, LOW);
-      delayMicroseconds(1);
-      digitalWriteOK(PIN_AVR_CLK, HIGH);
-      delayMicroseconds(1);
+    SPISettings settingsA(8000000, MSBFIRST, SPI_MODE0);
+    uint8_t bytes = 9; //ZX_MATRIX_SIZE/8;
+    for (uint8_t i=0; i<bytes; i++) {
+      uint8_t data = get_matrix_byte(i);
+      SPI.beginTransaction(settingsA);
+      digitalWrite(PIN_SS, LOW);
+      uint8_t cmd = SPI.transfer(i+1); // command
+      uint8_t res = SPI.transfer(data); // data byte
+      // TODO: process cmd and res (for i2c clock setting, etc) from spi slave (CPLD)
+      digitalWrite(PIN_SS, HIGH);
+      SPI.endTransaction();
     }
-
-    // reset all to initial state
-    digitalWriteOK(PIN_AVR_DAT, HIGH);
-    digitalWriteOK(PIN_AVR_CLK, HIGH);
-    digitalWriteOK(PIN_AVR_RST, HIGH);
-    delayMicroseconds(1);
-
-#else 
-    // reset the address
-    digitalWrite(PIN_AVR_RST, LOW);
-    delayMicroseconds(1);
-    digitalWrite(PIN_AVR_RST, HIGH);
-    delayMicroseconds(1);
-
-    // transmit the matrix
-    for(int i=0; i<ZX_MATRIX_SIZE; i++) {
-      digitalWrite(PIN_AVR_DAT, !matrix[i]);
-
-      digitalWrite(PIN_AVR_CLK, LOW);
-      delayMicroseconds(1);
-      digitalWrite(PIN_AVR_CLK, HIGH);
-      delayMicroseconds(1);
-    }
-
-    // reset all to initial state
-    digitalWrite(PIN_AVR_DAT, HIGH);
-    digitalWrite(PIN_AVR_CLK, HIGH);
-    digitalWrite(PIN_AVR_RST, HIGH);
-    delayMicroseconds(1);
-#endif
 }
 
 void init_mouse()
@@ -529,30 +448,12 @@ void init_mouse()
 // initial setup
 void setup()
 {
-#if DEBUG_MODE
-    Serial.begin(115200);
-    Serial.println(F("ZX Keyboard / mouse controller v1.0"));
-#if defined(__AVR_ATmega8515__)
-    Serial.println(F("Atmega 8515"));
-#elif defined(__AVR_ATmega162__)
-    Serial.println(F("Atmega 162"));
-#elif defined(__AVR_ATmega328__)
-    Serial.println(F("Atmega 328"));
-#elif defined(__AVR_ATmega168__)
-    Serial.println(F("Atmega 168"));
-#elif defined(__AVR_ATmega88__)
-    Serial.println(F("Atmega 88"));
-#elif defined(__AVR_ATmega48__)
-    Serial.println(F("Atmega 48"));
-#elif defined(__AVR_ATmega8__)
-    Serial.println(F("Atmega 8"));
-#endif
-#endif
+  SPI.begin();
 
-// 8515 trick to use INT1 pin to edge detect, that is not allowed on INT2 pin
-#ifdef PIN_KBD_CLK_ORIG
-  pinMode(PIN_KBD_CLK_ORIG, INPUT);
-#endif 
+  pinMode(PIN_SS, OUTPUT);
+  digitalWrite(PIN_SS, HIGH);
+
+  // ps/2
 
   pinMode(PIN_KBD_CLK, INPUT_PULLUP);
   pinMode(PIN_KBD_DAT, INPUT_PULLUP);
@@ -560,20 +461,7 @@ void setup()
   pinMode(PIN_MOUSE_CLK, INPUT_PULLUP);
   pinMode(PIN_MOUSE_DAT, INPUT_PULLUP);
   
-  // serial interface setup
-
-#if defined( __AVR_ATmega8515__ ) || defined( __AVR_ATmega162__ )
-    digitalWriteOK(PIN_AVR_CLK, HIGH);
-    digitalWriteOK(PIN_AVR_RST, HIGH);
-    digitalWriteOK(PIN_AVR_DAT, HIGH);
-#else
-  pinMode(PIN_AVR_CLK, OUTPUT);
-  pinMode(PIN_AVR_RST, OUTPUT);
-  pinMode(PIN_AVR_DAT, OUTPUT);
-  digitalWrite(PIN_AVR_CLK, HIGH);
-  digitalWrite(PIN_AVR_RST, HIGH);
-  digitalWrite(PIN_AVR_DAT, HIGH);
-#endif
+  // zx signals (output)
 
   pinMode(PIN_RESET, OUTPUT);
   digitalWrite(PIN_RESET, HIGH);
@@ -584,12 +472,19 @@ void setup()
   pinMode(PIN_MAGIC, OUTPUT);
   digitalWrite(PIN_MAGIC, HIGH);
 
+  // uart
+  pinMode(PIN_ICTS, INPUT_PULLUP);
+  pinMode(PIN_ORTS, OUTPUT);
+  
+
   // all keys up
   for (int i=0; i<ZX_MATRIX_SIZE; i++) {
       matrix[i] = false;
   }
 
 #if DEBUG_MODE
+  Serial.begin(115200);
+  Serial.println(F("ZX Keyboard / mouse controller v1.0"));
   Serial.println(F("Keyboard init..."));
 #endif
 

@@ -165,14 +165,16 @@ set_location_assignment PIN_140 -to m1_z
 set_location_assignment PIN_124 -to iorqge_sl
 set_location_assignment PIN_51 -to cache_oe
 set_location_assignment PIN_122 -to ay_clk
-set_location_assignment PIN_125 -to ATM_PB3
 set_location_assignment PIN_121 -to cpld_121
-set_global_assignment -name VHDL_FILE cpld_kbd.vhd
-set_global_assignment -name VHDL_FILE SPI.vhd
-set_global_assignment -name VHDL_FILE extend.vhd
-set_global_assignment -name VECTOR_WAVEFORM_FILE extend.vwf
 
 set_location_assignment PIN_123 -to AVR_RST
 set_location_assignment PIN_102 -to AVR_CLK
 set_location_assignment PIN_103 -to AVR_DAT
 set_location_assignment PIN_101 -to INT1
+set_global_assignment -name VHDL_FILE spi_slave.vhd
+set_global_assignment -name VHDL_FILE cpld_kbd.vhd
+set_global_assignment -name VHDL_FILE SPI.vhd
+set_global_assignment -name VHDL_FILE extend.vhd
+set_global_assignment -name VECTOR_WAVEFORM_FILE extend.vwf
+set_global_assignment -name POWER_PRESET_COOLING_SOLUTION "NO HEAT SINK WITH STILL AIR"
+set_location_assignment PIN_125 -to AVR_SS

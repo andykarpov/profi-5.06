@@ -4,18 +4,17 @@ use IEEE.std_logic_arith.conv_integer;
 use IEEE.numeric_std.all;
 
 entity cpld_kbd is
-	generic 
-	(
-		OPEN_COLLECTOR: integer);
 	port
 	(
 	 CLK			 : in std_logic;
+	 N_RESET 	 : in std_logic := '1';
 	 N_CS			 : in std_logic := '1';
     A           : in std_logic_vector(15 downto 8);     -- address bus for kbd
     KB          : out std_logic_vector(5 downto 0) := "111111";     -- data bus for kbd + extended bit (b6)
     AVR_CLK     : in std_logic;
-    AVR_RST     : in std_logic;
+    AVR_RST     : out std_logic;
     AVR_DATA    : in std_logic;
+	 AVR_SS 		 : in std_logic;
 	 
 	 MS_X 	 	: out std_logic_vector(7 downto 0);
 	 MS_Y 	 	: out std_logic_vector(7 downto 0);
@@ -25,10 +24,8 @@ entity cpld_kbd is
     end cpld_kbd;
 architecture RTL of cpld_kbd is
 
-    -- 40 spectrum keyboard keys + 1 special bit b6 + 8 bit mouse x, 8 bit y, 3 bit btns, 1 bit change data flag
-    type kb_mem is  array( 0 to 64 ) of  std_logic;
-    signal kb_data : kb_mem;
-    signal kb_addr : integer range 0 to 64;
+	 -- keyboard state
+	 signal kb_data : std_logic_vector(64 downto 0); -- 40 keys + bit6 + mouse data
 	 signal ms_flag : std_logic := '0';
 	 
 	 -- mouse
@@ -40,49 +37,58 @@ architecture RTL of cpld_kbd is
 	 signal deltaY		: signed(8 downto 0);
 	 signal deltaZ		: signed(3 downto 0);
 	 signal trigger 	: std_logic := '0';
+	 
+	 -- spi
+	 signal spi_do_valid : std_logic := '0';
+	 signal spi_do : std_logic_vector(15 downto 0);
 
 begin
 
--- Read in the data from MCU's serial bus
-process( AVR_CLK, AVR_DATA, AVR_RST)
+U_SPI: entity work.spi_slave
+    generic map(
+        N              => 16 -- 2 bytes (cmd + data)       
+    )
+    port map(
+        clk_i          => CLK,
+        spi_sck_i      => AVR_DATA,
+        spi_ssel_i     => AVR_SS,
+        spi_mosi_i     => AVR_CLK,
+        spi_miso_o     => AVR_RST,
+
+        di_req_o       => open,
+        di_i           => (others => '0'),
+        wren_i         => '1',
+        do_valid_o     => spi_do_valid,
+        do_o           => spi_do,
+
+        do_transfer_o  => open,
+        wren_o         => open,
+        wren_ack_o     => open,
+        rx_bit_reg_o   => open,
+        state_dbg_o    => open
+        );
+
+
+process (CLK, spi_do_valid, spi_do)
 begin
-
-	-- open collector transmission (active 0)
-	if (OPEN_COLLECTOR = 1) then 
-		 if (AVR_RST = '0') then
-			kb_addr <= 0;
-		 else
-
-			 if ( falling_edge( AVR_CLK )) then
-				 -- read the key status from the micro-controller
-				 -- if the bit is '0' that means the key is pressed
-							  kb_data( conv_integer(kb_addr)  ) <=  not(AVR_DATA);
-			 end if;
-
-			 if ( rising_edge( AVR_CLK )) then
-				 -- increment the pointer
-				 kb_addr <= kb_addr + 1;
-			 end if;
-		 end if;
-	-- normal transmission (active 1)
-	else
-		 if (AVR_RST = '1') then
-			kb_addr <= 0;
-		 else
-
-			 if ( rising_edge( AVR_CLK )) then
-				 -- read the key status from the micro-controller
-				 -- if the bit is '1' that means the key is pressed
-							  kb_data( conv_integer(kb_addr)  ) <=  AVR_DATA;
-			 end if;
-
-			 if ( falling_edge( AVR_CLK )) then
-				 -- increment the pointer
-				 kb_addr <= kb_addr + 1;
-			 end if;
-		 end if;
+	if (rising_edge(CLK)) then
+		if (spi_do_valid = '1') then 
+			case spi_do(15 downto 8) is 
+				when X"01" => kb_data(7 downto 0) <= spi_do (7 downto 0);
+				when X"02" => kb_data(15 downto 8) <= spi_do (7 downto 0);
+				when X"03" => kb_data(23 downto 16) <= spi_do (7 downto 0);
+				when X"04" => kb_data(31 downto 24) <= spi_do (7 downto 0);
+				when X"05" => kb_data(39 downto 32) <= spi_do (7 downto 0);
+				when X"06" => kb_data(47 downto 40) <= spi_do (7 downto 0);
+				when X"07" => kb_data(55 downto 48) <= spi_do (7 downto 0);
+				when X"08" => kb_data(63 downto 56) <= spi_do (7 downto 0);
+				when X"09" => kb_data(64) <= spi_do (0);
+				when others => 
+			end case;
+		end if;
 	end if;
-end process;
+end process;		  
+		  
 --    
 process( kb_data, A, CLK)
 begin
@@ -92,8 +98,6 @@ begin
 --    -- the up/down status of MULTIPLE 'keybits' will be passeds
 
 		if (rising_edge(CLK)) then
-		
-			if (N_CS = '0') then
 				KB(0) <=	not(( kb_data(0)  and not(A(8)  ) ) 
 							or 	( kb_data(1)  and not(A(9)  ) ) 
 							or 	( kb_data(2) and not(A(10) ) ) 
@@ -140,12 +144,6 @@ begin
 							or   ( kb_data(39) and not(A(15)) ) );
 							
 				KB(5) <= not(kb_data(40));
-			else
-				KB <= "ZZZZZZ";
-			end if;
-		
-
-		
 		end if;
 
 end process;

@@ -92,9 +92,10 @@ dcd				:in std_logic;
 --ATM_PB4		:out std_logic := 'Z'; -- signal dlja chasov Profi
 
 --------------mega------------------
-AVR_CLK			: in std_logic := '1';
-AVR_DAT			: in std_logic := '1';
-AVR_RST 			: in std_logic := '1';
+AVR_CLK			: in std_logic; -- MOSI
+AVR_DAT			: in std_logic; -- SCK
+AVR_RST 			: out std_logic; -- MISO
+AVR_SS 			: in std_logic; -- SS
 INT1 				: in std_logic;
 
 ---------------HDD------------------
@@ -804,7 +805,7 @@ begin
 --		Data <= "11111110";
 --	elsif DCD='1' and P4I='0' and rd='0' and wr='1' then
 --		Data <= "01111111";
-	elsif (cs_fe='0' and rd='0' and wr='1' and m1='1' and kbus(4 downto 0) /= "11111") then 
+	elsif (cs_fe='0' and rd='0' and wr='1' and m1='1') then 
 		Data <= "11" & kbus(5 downto 0);
 	elsif	(iorq = '0' and rd = '0' and adress(15 downto 0) = "1111101011011111") then -- Mouse Port FADF[11111010_11011111] = <Z>1<MB><LB><RB>
 		data <= ms_z_bus(3 downto 0) & '1' & ms_b_bus(2 downto 0);
@@ -848,17 +849,16 @@ port map(
 );
 
 PS2_KBD: entity work.cpld_kbd
-GENERIC MAP (
-	OPEN_COLLECTOR => 1
-)
 PORT MAP (
         --INPUTS
 	 CLK => f14,
+	 N_RESET => res,
 	 N_CS => kbus_cs,
     A => Adress(15 downto 8), -- address bus for kbd
     AVR_CLK => AVR_CLK,
     AVR_RST => AVR_RST,
     AVR_DATA => AVR_DAT,
+	 AVR_SS => AVR_SS,
 	 -- OUTPUTS
 	 KB => kbus,
 	 MS_X => ms_x_bus,
