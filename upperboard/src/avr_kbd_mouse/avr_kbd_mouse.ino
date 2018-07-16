@@ -12,6 +12,7 @@
 #include "matrix.h"
 #include "ps2_codes.h"
 #include "ps2mouse.h"
+#include "PCF8583.h"
 #include <SPI.h>
 
 #define DEBUG_MODE 0
@@ -40,26 +41,46 @@
 #define PIN_ICTS A1 // pin 22
 #define PIN_ORTS A0 // pin 21
 
+#define RTC_ADDRESS 0xA0
+
 
 PS2KeyRaw kbd;
 PS2Mouse mouse(PIN_MOUSE_CLK, PIN_MOUSE_DAT);
+PCF8583 rtc(RTC_ADDRESS);
 
 bool matrix[ZX_MATRIX_SIZE]; // matrix of pressed keys + mouse reports to be transmitted on CPLD side by simple serial protocol
 bool profi_mode = true; // false = zx spectrum mode (switched by PrtSrc button in run-time)
 bool is_turbo = false; // turbo toggle (switched by ScrollLock button)
 bool mouse_present = false; // mouse present flag (detected by signal change on CLKM pin)
-unsigned long t = 0;
-unsigned long tm = 0;
-unsigned long tl = 0;
-int mouse_tries = 5;
+bool blink_state = false;
 
-uint8_t mouse_x = 0;
-uint8_t mouse_y = 0;
-uint8_t mouse_z = 0;
-uint8_t mouse_btns = 0;
-bool mouse_new_packet = false;
+unsigned long t = 0;  // current time
+unsigned long tm = 0; // mouse poll time
+unsigned long tl = 0; // blink poll time
+unsigned long tr = 0; // rtc poll time
+int mouse_tries = 2; // number of triers to init mouse
 
-SPISettings settingsA(8000000, MSBFIRST, SPI_MODE0);
+uint8_t mouse_x = 0; // current mouse X
+uint8_t mouse_y = 0; // current mouse Y
+uint8_t mouse_z = 0; // current mousr Z
+uint8_t mouse_btns = 0; // mouse buttons state
+bool mouse_new_packet = false; // new packet to send (toggle flag)
+
+uint8_t rtc_year = 0;
+uint8_t rtc_month = 0;
+uint8_t rtc_day = 0;
+uint8_t rtc_hours = 0;
+uint8_t rtc_minutes = 0;
+uint8_t rtc_seconds = 0;
+
+uint8_t tmp_rtc_year = 0;
+uint8_t tmp_rtc_month = 0;
+uint8_t tmp_rtc_day = 0;
+uint8_t tmp_rtc_hours = 0;
+uint8_t tmp_rtc_minutes = 0;
+uint8_t tmp_rtc_seconds = 0;
+
+SPISettings settingsA(8000000, MSBFIRST, SPI_MODE0); // SPI transmission settings
 
 // transform PS/2 scancodes into internal matrix of pressed keys
 void fill_kbd_matrix(int sc)
@@ -479,9 +500,103 @@ void transmit_mouse_data()
   }  
 }
 
+void transmit_rtc_data()
+{
+  uint8_t cmd = 0;
+  uint8_t res = 0;
+
+  SPI.beginTransaction(settingsA);
+  digitalWrite(PIN_SS, LOW);
+  cmd = SPI.transfer(CMD_RTC_YEAR); // command (0x11)
+  res = SPI.transfer(rtc_year);     // year
+  digitalWrite(PIN_SS, HIGH);
+  SPI.endTransaction();
+  if (cmd > 0) {
+    process_in_cmd(cmd, res);
+  }
+
+  SPI.beginTransaction(settingsA);
+  digitalWrite(PIN_SS, LOW);
+  cmd = SPI.transfer(CMD_RTC_MONTH); // command (0x12)
+  res = SPI.transfer(rtc_month);     // month
+  digitalWrite(PIN_SS, HIGH);
+  SPI.endTransaction();
+  if (cmd > 0) {
+    process_in_cmd(cmd, res);
+  }
+
+  SPI.beginTransaction(settingsA);
+  digitalWrite(PIN_SS, LOW);
+  cmd = SPI.transfer(CMD_RTC_DAY); // command (0x13)
+  res = SPI.transfer(rtc_day);     // day
+  digitalWrite(PIN_SS, HIGH);
+  SPI.endTransaction();
+  if (cmd > 0) {
+        process_in_cmd(cmd, res);
+  }
+
+  SPI.beginTransaction(settingsA);
+  digitalWrite(PIN_SS, LOW);
+  cmd = SPI.transfer(CMD_RTC_HOURS); // command (0x14)
+  res = SPI.transfer(rtc_hours);     // hours
+  digitalWrite(PIN_SS, HIGH);
+  SPI.endTransaction();
+  if (cmd > 0) {
+    process_in_cmd(cmd, res);
+  }
+
+  SPI.beginTransaction(settingsA);
+  digitalWrite(PIN_SS, LOW);
+  cmd = SPI.transfer(CMD_RTC_MINUTES); // command (0x15)
+  res = SPI.transfer(rtc_minutes);     // minutes
+  digitalWrite(PIN_SS, HIGH);
+  SPI.endTransaction();
+  if (cmd > 0) {
+    process_in_cmd(cmd, res);
+  }
+
+  SPI.beginTransaction(settingsA);
+  digitalWrite(PIN_SS, LOW);
+  cmd = SPI.transfer(CMD_RTC_SECONDS); // command (0x16)
+  res = SPI.transfer(rtc_seconds);     // seconds
+  digitalWrite(PIN_SS, HIGH);
+  SPI.endTransaction();
+  if (cmd > 0) {
+        process_in_cmd(cmd, res);
+  }
+}
+
 void process_in_cmd(uint8_t cmd, uint8_t data)
 {
-  // TODO
+  switch (cmd) {
+    case CMD_RTC_SEND_YEAR:
+      tmp_rtc_year = data;
+    break;
+    case CMD_RTC_SEND_MONTH:
+      tmp_rtc_month = data;
+    break;
+    case CMD_RTC_SEND_DAY:
+      tmp_rtc_day = data;
+    break;
+    case CMD_RTC_SEND_HOURS:
+      tmp_rtc_hours = data;
+    break;
+    case CMD_RTC_SEND_MINUTES:
+      tmp_rtc_minutes = data;
+    break;
+    case CMD_RTC_SEND_SECONDS:
+      tmp_rtc_seconds = data;
+    break;
+    case CMD_RTC_SAVE:
+      rtc.setDateTime(tmp_rtc_year, tmp_rtc_month, tmp_rtc_day, tmp_rtc_hours, tmp_rtc_minutes, tmp_rtc_seconds);
+      rtc_year = tmp_rtc_year;
+      rtc_month = tmp_rtc_month;
+      rtc_day = tmp_rtc_day;
+      rtc_minutes = tmp_rtc_minutes;
+      rtc_hours = tmp_rtc_hours;
+      rtc_seconds = tmp_rtc_seconds;
+    break;  
+  }
 }
 
 void init_mouse()
@@ -507,7 +622,7 @@ void setup()
   digitalWrite(PIN_SS, HIGH);
 
   pinMode(PIN_BUSY, OUTPUT);
-  digitalWrite(PIN_BUSY, LOW);
+  digitalWrite(PIN_BUSY, HIGH);
 
   // ps/2
 
@@ -544,7 +659,12 @@ void setup()
   Serial.println(F("Keyboard init..."));
 #endif
 
-  kbd.begin(PIN_KBD_DAT, PIN_KBD_CLK);
+// send reset signal on boot
+digitalWrite(PIN_RESET, LOW);
+delay(100);
+digitalWrite(PIN_RESET, HIGH);
+
+kbd.begin(PIN_KBD_DAT, PIN_KBD_CLK);
 
 #if DEBUG_MODE
   Serial.println(F("done"));
@@ -552,16 +672,20 @@ void setup()
 #endif
 
 init_mouse();
+
+digitalWrite(PIN_BUSY, LOW);
   
 }
 
 // main loop
 void loop()
 {
-  digitalWrite(PIN_BUSY, LOW);
+  unsigned long n = millis();
   
   if (kbd.available()) {
     int c = kbd.read();
+    blink_state = true;
+    tl = n;
     digitalWrite(PIN_BUSY, HIGH);
 #if DEBUG_MODE    
     Serial.print(F("Scancode: "));
@@ -573,10 +697,29 @@ void loop()
   // transmit kbd always
   transmit_keyboard_matrix();
 
-  unsigned long n = millis();
 
-  // try to re-init mouse every 5s if not present, up to 5 tries
-  if (mouse_tries > 0 && !mouse_present && n - tm > 5000) {
+  if (n - tl >= 200) {
+    digitalWrite(PIN_BUSY, LOW);
+    blink_state = false;
+  }
+
+  if (n - tr >= 1000) {
+
+    rtc_year = rtc.getYear();
+    rtc_month = rtc.getMonth();
+    rtc_day = rtc.getDay();
+
+    rtc_hours = rtc.getHour();
+    rtc_minutes = rtc.getMinute();
+    rtc_seconds = rtc.getSecond();
+
+    tr = n;
+
+    transmit_rtc_data();
+  }
+
+  // try to re-init mouse every 1s if not present, up to N tries
+  if (mouse_tries > 0 && !mouse_present && n - tm > 1000) {
     mouse_tries--;
     init_mouse();
     tm = n;
