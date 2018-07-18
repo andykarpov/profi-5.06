@@ -19,7 +19,14 @@ entity cpld_kbd is
 	 MS_X 	 	: out std_logic_vector(7 downto 0);
 	 MS_Y 	 	: out std_logic_vector(7 downto 0);
 	 MS_BTNS 	 	: out std_logic_vector(2 downto 0);
-	 MS_Z 		: out std_logic_vector(3 downto 0)
+	 MS_Z 		: out std_logic_vector(3 downto 0);
+	 
+	 RTC_A 		: in std_logic_vector(5 downto 0);
+	 RTC_DI 		: in std_logic_vector(7 downto 0);
+	 RTC_DO 		: out std_logic_vector(7 downto 0);
+	 RTC_WR 		: in std_logic;
+	 RTC_CS 		: in std_logic
+	 
 	);
     end cpld_kbd;
 architecture RTL of cpld_kbd is
@@ -47,6 +54,25 @@ architecture RTL of cpld_kbd is
 	 -- spi
 	 signal spi_do_valid : std_logic := '0';
 	 signal spi_do : std_logic_vector(15 downto 0);
+	 
+	 -- rtc 
+ 	 signal leap_reg				: std_logic_vector(1 downto 0);
+ 	 signal seconds_reg			: std_logic_vector(7 downto 0); -- 00
+	 signal seconds_alarm_reg	: std_logic_vector(7 downto 0); -- 01
+	 signal minutes_reg			: std_logic_vector(7 downto 0); -- 02
+	 signal minutes_alarm_reg	: std_logic_vector(7 downto 0); -- 03
+	 signal hours_reg			: std_logic_vector(7 downto 0); -- 04
+	 signal hours_alarm_reg		: std_logic_vector(7 downto 0); -- 05
+	 signal weeks_reg			: std_logic_vector(7 downto 0); -- 06
+	 signal days_reg				: std_logic_vector(7 downto 0); -- 07
+	 signal month_reg			: std_logic_vector(7 downto 0); -- 08
+	 signal year_reg				: std_logic_vector(7 downto 0); -- 09
+	 signal a_reg				: std_logic_vector(7 downto 0); -- 0A
+	 signal b_reg				: std_logic_vector(7 downto 0); -- 0B
+	 signal c_reg				: std_logic_vector(7 downto 0); -- 0C
+--	 signal d_reg				: std_logic_vector(7 downto 0); -- 0D
+	 signal e_reg				: std_logic_vector(7 downto 0); -- 0E
+	 signal f_reg				: std_logic_vector(7 downto 0); -- 0F
 
 begin
 
@@ -196,5 +222,70 @@ end process;
 	MS_Y 		<= std_logic_vector(cursorY);
 	MS_Z		<= std_logic_vector(deltaZ);
 
+process(RTC_A, seconds_reg, seconds_alarm_reg, minutes_reg, minutes_alarm_reg, hours_reg, hours_alarm_reg, weeks_reg, days_reg, month_reg, year_reg,
+			a_reg, b_reg, c_reg, e_reg, f_reg)
+	begin
+		-- RTC register read
+		case RTC_A(5 downto 0) is
+			when "000000" => RTC_DO <= seconds_reg;
+			when "000001" => RTC_DO <= seconds_alarm_reg;
+			when "000010" => RTC_DO <= minutes_reg;
+			when "000011" => RTC_DO <= minutes_alarm_reg;
+			when "000100" => RTC_DO <= hours_reg;
+			when "000101" => RTC_DO <= hours_alarm_reg;
+			when "000110" => RTC_DO <= weeks_reg;
+			when "000111" => RTC_DO <= days_reg;
+			when "001000" => RTC_DO <= month_reg;
+			when "001001" => RTC_DO <= year_reg;
+			when "001010" => RTC_DO <= a_reg;
+			when "001011" => RTC_DO <= b_reg;
+			when "001100" => RTC_DO <= c_reg;
+			when "001101" => RTC_DO <= "10000000";
+			when "001110" => RTC_DO <= e_reg;
+			when "001111" => RTC_DO <= f_reg;
+			when others => RTC_DO <= "ZZZZZZZZ";
+		end case;
+	end process;
+		
+	process(CLK, N_RESET)
+	begin
+		if N_RESET = '0' then
+			a_reg <= "00100110";
+			b_reg <= (others => '0');
+			c_reg <= (others => '0');
+		elsif CLK'event and CLK = '1' then
+			-- RTC register write
+			if RTC_WR = '1' and RTC_CS = '1' then
+				case RTC_A(5 downto 0) is
+					when "000000" => seconds_reg <= RTC_DI;
+					when "000001" => seconds_alarm_reg <= RTC_DI;
+					when "000010" => minutes_reg <= RTC_DI;
+					when "000011" => minutes_alarm_reg <= RTC_DI;
+					when "000100" => hours_reg <= RTC_DI;
+					when "000101" => hours_alarm_reg <= RTC_DI;
+					when "000110" => weeks_reg <= RTC_DI;
+					when "000111" => days_reg <= RTC_DI;
+					when "001000" => month_reg <= RTC_DI;
+					when "001001" => year_reg <= RTC_DI;
+						if b_reg(2) = '0' then -- BCD to BIN convertion
+							if RTC_DI(4) = '0' then
+								leap_reg <= RTC_DI(1 downto 0);
+							else
+								leap_reg <= (not RTC_DI(1)) & RTC_DI(0);
+							end if;
+						else 
+							leap_reg <= RTC_DI(1 downto 0);
+						end if;
+					when "001010" => a_reg <= RTC_DI;
+					when "001011" => b_reg <= RTC_DI;
+--					when "001100" => c_reg <= DI;
+--					when "001101" => d_reg <= DI;
+					when "001110" => e_reg <= RTC_DI;
+					when others => null;
+				end case;
+			end if;			
+		end if;
+	end process;
+	
 end RTL;
 

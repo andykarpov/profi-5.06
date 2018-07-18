@@ -337,26 +337,26 @@ process(f14)
 
 -- DFFD port clock and #FD port correction
 
-process(f14, m1_z, data)
-	begin
-		if m1_z='0' then
-			if f14'event and f14='1' then
-				data_reg <= data;
-			end if;
-        end if;
-    end process;
-    
-fd_sel <='0' when Data_reg(7 downto 4)="1101" and Data_reg(2 downto 0)="011" else '1';
-cpld_121 <= fd_sel;
-
-process (fd_sel, m1_z, res, mrq, rd)
-	begin
-		if res='0' or (m1_z='0' and rd='1' and mrq='1') then
+--process(f14, m1_z, data)
+--	begin
+--		if m1_z='0' then
+--			if f14'event and f14='1' then
+--				data_reg <= data;
+--			end if;
+--        end if;
+--    end process;
+--    
+--fd_sel <='0' when Data_reg(7 downto 4)="1101" and Data_reg(2 downto 0)="011" else '1';
+--cpld_121 <= fd_sel;
+--
+--process (fd_sel, m1_z, res, mrq, rd)
+--	begin
+--		if res='0' or (m1_z='0' and rd='1' and mrq='1') then
 			fd_port <='1';
-		elsif (rising_edge(m1_z)) then
-			fd_port <= fd_sel;
-		end if;
-end process;
+--		elsif (rising_edge(m1_z)) then
+--			fd_port <= fd_sel;
+--		end if;
+--end process;
 cs_dffd <='0' when adress(15 downto 8)=X"df" and adress(1)='0' and fd_port='1' and iorq='0' else '1';
 c_dffd <= not (cs_dffd or wr);
 
@@ -404,7 +404,7 @@ sound_oe <= fon and not CHAN_A and not CHAN_B and not CHAN_C and not CHAN_D and 
 
 t_ap6 <= (rd or not wr or not m1_z) and FI and cache_rd and ms_port;
 csap6 <= not drive_oe and floppy_oe and sound_oe and vv55_cs and vi53_cs and vv51_cs and P4I and FI and cs_dffd and cs_7ffd and cache_en and cache_cs and cs_fe and ms_port;
-oe_ap6 <= csap6 and m1_z; 
+oe_ap6 <= csap6;-- and m1_z;
 t_lvc245 <= (rd or not wr or not m1_z or (not spi_iorqge and not csff and not iorqge_7ffd and not iorqge_dffd and not iorqge_fe)) and FI and ms_port;
 
 ----------------VV55------------------------
@@ -446,7 +446,7 @@ process(f14, wr, cache_en, cache_rd)
 
 WAIT_IO <= WAIT_C(2) and WAIT_C(1);
 WAIT_C_stop <= WAIT_C(2) and WAIT_C(1) and not WAIT_C(0);
-wait_en <= res and not (turbo and not reg_dffd(7));
+wait_en <= res;-- and not (turbo and not reg_dffd(7));
 process (f14, res, iorq_z, wait_en) 	
 	begin					
 		if wait_en = '0' then	
@@ -564,7 +564,7 @@ P0 <='0' when adress(7)='1' and adress(4 downto 0)="00011" and iorq='0' and CPM=
 
 cswg <= RT_F1 and P0;
 
-tr_dos <= '0' when dos='0' and cpm='1' else '1';
+tr_dos <= not (cpm and not dos);--'0' when dos='0' and cpm='1' else '1
 disk0 <= pff(0);
 disk1 <= pff(1);
 mag <= '0' when magik='0' and mem='0' and pzu='1' and cpm='1' else '1';
@@ -864,7 +864,14 @@ PORT MAP (
 	 MS_X => ms_x_bus,
 	 MS_Y => ms_y_bus,
 	 MS_Z => ms_z_bus,
-	 MS_BTNS => ms_b_bus
+	 MS_BTNS => ms_b_bus,
+	 
+	 -- RTC TODO
+	 RTC_A => (others => '0'),
+	 RTC_DI => (others => '0'),
+	 RTC_DO => open,
+	 RTC_WR => '0',
+	 RTC_CS => '0'
 );
 
 kbus_cs <= '0' when cs_fe='0' and rd='0' else '1';
