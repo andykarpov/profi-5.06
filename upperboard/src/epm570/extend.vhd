@@ -91,6 +91,8 @@ dcd				:in std_logic;
 --ATM_PB3		:out std_logic := 'Z'; -- signal dlja chasov Profi
 --ATM_PB4		:out std_logic := 'Z'; -- signal dlja chasov Profi
 
+SEL 				: buffer std_logic := '0';
+
 --------------mega------------------
 AVR_MOSI			: in std_logic; -- MOSI
 AVR_SCK			: in std_logic; -- SCK
