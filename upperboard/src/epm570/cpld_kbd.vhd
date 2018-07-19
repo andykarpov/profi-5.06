@@ -34,7 +34,7 @@ architecture RTL of cpld_kbd is
 	 -- keyboard state
 	 signal kb_data : std_logic_vector(40 downto 0) := (others => '0'); -- 40 keys + bit6
 	 signal ms_flag : std_logic := '0';
-	 signal prev_bit6 : std_logic := '1';
+	 signal prev_bit6 : std_logic := '0';
 	 
 	 -- mouse
 	 signal mouse_x : signed(7 downto 0);
