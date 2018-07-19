@@ -807,8 +807,8 @@ begin
 --		Data <= "11111110";
 --	elsif DCD='1' and P4I='0' and rd='0' and wr='1' then
 --		Data <= "01111111";
-	elsif (cs_fe='0' and rd='0' and wr='1' and m1='1') then 
-		Data <= "11" & kbus(5 downto 0);
+	elsif (cs_fe='0' and rd='0') then  --elsif (cs_fe='0' and rd='0' and wr='1' and m1='1') then 
+		Data <= "ZZ" & kbus(5 downto 0);
 	elsif	(iorq = '0' and rd = '0' and adress(15 downto 0) = "1111101011011111") then -- Mouse Port FADF[11111010_11011111] = <Z>1<MB><LB><RB>
 		data <= ms_z_bus(3 downto 0) & '1' & ms_b_bus(2 downto 0);
 	elsif	(iorq = '0' and rd = '0' and adress(15 downto 0) = "1111101111011111") then
