@@ -34,7 +34,6 @@ architecture RTL of cpld_kbd is
 	 -- keyboard state
 	 signal kb_data : std_logic_vector(40 downto 0) := (others => '0'); -- 40 keys + bit6
 	 signal ms_flag : std_logic := '0';
-	 signal prev_bit6 : std_logic := '0';
 	 
 	 -- mouse
 	 signal mouse_x : signed(7 downto 0);
@@ -127,7 +126,7 @@ begin
 end process;		  
 		  
 --    
-process( kb_data, A, CLK)
+process( kb_data, A)
 begin
 
 --    -- if an address line is low then set the databus to the bit value for that column
@@ -196,13 +195,9 @@ begin
 				-- Иными словами, за один конкретный момент, адаптер клавы, может нам сообщить 6-м битом, о нажатии лишь одной из 16-и доп. клавишь, 
 				-- которые он понимает. Т.е. одна кнопка в 1 момент времени. Иначе никак.
 
-				-- KB(5) <= not(kb_data(40));				
-				if (prev_bit6 /= kb_data(40)) then
 					if (A(15)='0') then
-						prev_bit6 <= kb_data(40);
 						KB(5) <= not(kb_data(40));
 					end if;
-				end if;
 		--end if;
 
 end process;
