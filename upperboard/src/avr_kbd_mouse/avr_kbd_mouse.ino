@@ -13,6 +13,7 @@
 #include "ps2_codes.h"
 #include "ps2mouse.h"
 #include "PCF8583.h"
+#include <EEPROM.h>
 #include <SPI.h>
 
 #define DEBUG_MODE 0
@@ -43,6 +44,11 @@
 
 #define RTC_ADDRESS 0xA0
 
+#define EEPROM_TURBO_ADDRESS 0x00
+#define EEPROM_MODE_ADDRESS 0x01
+
+#define EEPROM_VALUE_TRUE 10
+#define EEPROM_VALUE_FALSE 20
 
 PS2KeyRaw kbd;
 PS2Mouse mouse(PIN_MOUSE_CLK, PIN_MOUSE_DAT);
@@ -53,11 +59,13 @@ bool profi_mode = true; // false = zx spectrum mode (switched by PrtSrc button i
 bool is_turbo = false; // turbo toggle (switched by ScrollLock button)
 bool mouse_present = false; // mouse present flag (detected by signal change on CLKM pin)
 bool blink_state = false;
+bool flags_changed = false; // changed flags is_turbo / profi_mode
 
 unsigned long t = 0;  // current time
 unsigned long tm = 0; // mouse poll time
 unsigned long tl = 0; // blink poll time
 unsigned long tr = 0; // rtc poll time
+unsigned long te = 0; // eeprom store time
 int mouse_tries = 2; // number of triers to init mouse
 
 uint8_t mouse_x = 0; // current mouse X
@@ -87,7 +95,7 @@ void fill_kbd_matrix(int sc)
 {
 
   static bool is_up=false, is_e=false, is_e1=false;
-  static bool is_ctrl=false, is_alt=false, is_del=false;
+  static bool is_ctrl=false, is_alt=false, is_del=false, is_bksp = false;
 
   // is extended scancode prefix
   if (sc == 0xE0) {
@@ -189,6 +197,7 @@ void fill_kbd_matrix(int sc)
     case PS2_BACKSPACE:
       matrix[ZX_K_CS] = !is_up;
       matrix[ZX_K_0] = !is_up;
+      is_bksp = !is_up;
       break;
 
     // Enter
@@ -406,6 +415,7 @@ void fill_kbd_matrix(int sc)
       if (is_up) {
         is_turbo = !is_turbo;
         digitalWrite(PIN_TURBO, is_turbo ? LOW : HIGH);
+        eeprom_store_value(EEPROM_TURBO_ADDRESS, is_turbo);
       }
     break;
 
@@ -413,6 +423,7 @@ void fill_kbd_matrix(int sc)
     case PS2_PSCR1:
       if (is_up) {
         profi_mode = !profi_mode;
+        eeprom_store_value(EEPROM_MODE_ADDRESS, profi_mode);
       }
     break;
 
@@ -423,7 +434,20 @@ void fill_kbd_matrix(int sc)
   }
 
   // Ctrl+Alt+Del -> RESET
-  digitalWrite(PIN_RESET, (is_ctrl && is_alt && is_del) ? LOW : HIGH);
+  if (is_ctrl && is_alt && is_del) {
+    is_ctrl = false;
+    is_alt = false;
+    is_del = false;
+    do_reset();
+  }
+
+  // Ctrl+Alt+Bksp -> REINIT controller
+  if (is_ctrl && is_alt && is_bksp) {
+      is_ctrl = false;
+      is_alt = false;
+      is_bksp = false;
+      setup();
+  }
 
    // clear flags
    is_up = 0;
@@ -646,12 +670,14 @@ void setup()
   // uart
   pinMode(PIN_ICTS, INPUT_PULLUP);
   pinMode(PIN_ORTS, OUTPUT);
-  
 
-  // all keys up
-  for (int i=0; i<ZX_MATRIX_SIZE; i++) {
-      matrix[i] = false;
-  }
+  // clear full matrix
+  clear_matrix(ZX_MATRIX_SIZE);
+
+  // restore saved modes from EEPROM
+  eeprom_restore_values();
+
+  // apply turbo and mode
 
 #if DEBUG_MODE
   Serial.begin(115200);
@@ -659,10 +685,7 @@ void setup()
   Serial.println(F("Keyboard init..."));
 #endif
 
-// send reset signal on boot
-digitalWrite(PIN_RESET, LOW);
-delay(100);
-digitalWrite(PIN_RESET, HIGH);
+do_reset();
 
 kbd.begin(PIN_KBD_DAT, PIN_KBD_CLK);
 
@@ -675,6 +698,55 @@ init_mouse();
 
 digitalWrite(PIN_BUSY, LOW);
   
+}
+
+void do_reset()
+{
+  digitalWrite(PIN_RESET, LOW);
+  delay(10);
+  clear_matrix(41);
+  transmit_keyboard_matrix();
+  digitalWrite(PIN_RESET, HIGH);
+}
+
+void clear_matrix(int clear_size)
+{
+    // all keys up
+  for (int i=0; i<clear_size; i++) {
+      matrix[i] = false;
+  }
+}
+
+bool eeprom_restore_value(int addr, bool default_value)
+{
+  byte val;  
+  val = EEPROM.read(addr);
+  if ((val == EEPROM_VALUE_TRUE) || (val == EEPROM_VALUE_FALSE)) {
+    return (val == EEPROM_VALUE_TRUE) ? true : false;
+  } else {
+    EEPROM.update(addr, (default_value ? EEPROM_VALUE_TRUE : EEPROM_VALUE_FALSE));
+    return default_value;
+  }
+}
+
+void eeprom_store_value(int addr, bool value)
+{
+  byte val = (value ? EEPROM_VALUE_TRUE : EEPROM_VALUE_FALSE);
+  EEPROM.update(addr, val);
+}
+
+void eeprom_restore_values()
+{
+  is_turbo = eeprom_restore_value(EEPROM_TURBO_ADDRESS, is_turbo);
+  profi_mode = eeprom_restore_value(EEPROM_MODE_ADDRESS, profi_mode);
+  // apply restored values
+  digitalWrite(PIN_TURBO, is_turbo ? LOW : HIGH);
+}
+
+void eeprom_store_values()
+{
+  eeprom_store_value(EEPROM_TURBO_ADDRESS, is_turbo);
+  eeprom_store_value(EEPROM_MODE_ADDRESS, profi_mode);
 }
 
 // main loop
