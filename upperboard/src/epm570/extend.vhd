@@ -350,6 +350,10 @@ process(f14)
 --    
 --fd_sel <='0' when Data_reg(7 downto 4)="1101" and Data_reg(2 downto 0)="011" else '1';
 --cpld_121 <= fd_sel;
+
+-- screen mode: 1 - profi, 0 - spectrum
+cpld_121 <= reg_dffd(7);
+
 --
 --process (fd_sel, m1_z, res, mrq, rd)
 --	begin
