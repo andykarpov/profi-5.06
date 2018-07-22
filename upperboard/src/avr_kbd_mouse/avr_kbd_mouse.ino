@@ -46,6 +46,7 @@
 
 #define EEPROM_TURBO_ADDRESS 0x00
 #define EEPROM_MODE_ADDRESS 0x01
+#define EEPROM_RTC_OFFSET 0x10
 
 #define EEPROM_VALUE_TRUE 10
 #define EEPROM_VALUE_FALSE 20
@@ -74,19 +75,17 @@ uint8_t mouse_z = 0; // current mousr Z
 uint8_t mouse_btns = 0; // mouse buttons state
 bool mouse_new_packet = false; // new packet to send (toggle flag)
 
-uint8_t rtc_year = 0;
+int rtc_year = 0;
 uint8_t rtc_month = 0;
 uint8_t rtc_day = 0;
 uint8_t rtc_hours = 0;
 uint8_t rtc_minutes = 0;
 uint8_t rtc_seconds = 0;
 
-uint8_t tmp_rtc_year = 0;
-uint8_t tmp_rtc_month = 0;
-uint8_t tmp_rtc_day = 0;
-uint8_t tmp_rtc_hours = 0;
-uint8_t tmp_rtc_minutes = 0;
-uint8_t tmp_rtc_seconds = 0;
+uint8_t rtc_seconds_alarm = 0;
+uint8_t rtc_minutes_alarm = 0;
+uint8_t rtc_hours_alarm = 0;
+uint8_t rtc_week = 0;
 
 SPISettings settingsA(8000000, MSBFIRST, SPI_MODE0); // SPI transmission settings
 
@@ -440,13 +439,24 @@ void fill_kbd_matrix(int sc)
     is_del = false;
     do_reset();
   }
+  //digitalWrite(PIN_RESET, (is_ctrl && is_alt && is_del) ? LOW : HIGH);
 
   // Ctrl+Alt+Bksp -> REINIT controller
   if (is_ctrl && is_alt && is_bksp) {
       is_ctrl = false;
       is_alt = false;
       is_bksp = false;
-      setup();
+      clear_matrix(ZX_MATRIX_SIZE);
+      transmit_keyboard_matrix();
+      digitalWrite(PIN_RESET, LOW);      
+      matrix[ZX_K_S] = 1;
+      transmit_keyboard_matrix();
+      delay(500);
+      digitalWrite(PIN_RESET, HIGH); 
+      transmit_keyboard_matrix();
+      delay(500);
+      matrix[ZX_K_S] = 0;
+      //setup();
   }
 
    // clear flags
@@ -470,21 +480,26 @@ uint8_t get_matrix_byte(uint8_t pos)
   return result;
 }
 
+void spi_send(uint8_t addr, uint8_t data) 
+{
+      SPI.beginTransaction(settingsA);
+      digitalWrite(PIN_SS, LOW);
+      uint8_t cmd = SPI.transfer(addr); // command (1...6)
+      uint8_t res = SPI.transfer(data); // data byte
+      digitalWrite(PIN_SS, HIGH);
+      SPI.endTransaction();
+      if (cmd > 0) {
+        process_in_cmd(cmd, res);
+      }  
+}
+
 // transmit keyboard matrix from AVR to CPLD side via SPI
 void transmit_keyboard_matrix()
 {
     uint8_t bytes = 6;
     for (uint8_t i=0; i<bytes; i++) {
       uint8_t data = get_matrix_byte(i);
-      SPI.beginTransaction(settingsA);
-      digitalWrite(PIN_SS, LOW);
-      uint8_t cmd = SPI.transfer(i+1); // command (1...6)
-      uint8_t res = SPI.transfer(data); // data byte
-      digitalWrite(PIN_SS, HIGH);
-      SPI.endTransaction();
-      if (cmd > 0) {
-        process_in_cmd(cmd, res);
-      }
+      spi_send(i+1, data);
     }
 }
 
@@ -493,133 +508,170 @@ void transmit_mouse_data()
   uint8_t cmd = 0;
   uint8_t res = 0;
 
-  SPI.beginTransaction(settingsA);
-  digitalWrite(PIN_SS, LOW);
-  cmd = SPI.transfer(CMD_MOUSE_X); // command (0x0A)
-  res = SPI.transfer(mouse_x);     // X coord
-  digitalWrite(PIN_SS, HIGH);
-  SPI.endTransaction();
-  if (cmd > 0) {
-    process_in_cmd(cmd, res);
-  }
-
-  SPI.beginTransaction(settingsA);
-  digitalWrite(PIN_SS, LOW);
-  cmd = SPI.transfer(CMD_MOUSE_Y); // command (0x0B)
-  res = SPI.transfer(mouse_y);     // Y coord
-  digitalWrite(PIN_SS, HIGH);
-  SPI.endTransaction();
-  if (cmd > 0) {
-    process_in_cmd(cmd, res);
-  }
-
-  SPI.beginTransaction(settingsA);
-  digitalWrite(PIN_SS, LOW);
-  cmd = SPI.transfer(CMD_MOUSE_Z); // command (0x0C)
-  res = SPI.transfer(mouse_z);     // Z coord + buttons
-  digitalWrite(PIN_SS, HIGH);
-  SPI.endTransaction();
-  if (cmd > 0) {
-        process_in_cmd(cmd, res);
-  }  
+  spi_send(CMD_MOUSE_X, mouse_x);
+  spi_send(CMD_MOUSE_Y, mouse_y);
+  spi_send(CMD_MOUSE_Z, mouse_z);
 }
 
-void transmit_rtc_data()
-{
-  uint8_t cmd = 0;
-  uint8_t res = 0;
+void rtc_save() {
+  rtc.setDateTime(rtc_year, rtc_month, rtc_day, rtc_hours, rtc_minutes, rtc_seconds);
+}
 
-  SPI.beginTransaction(settingsA);
-  digitalWrite(PIN_SS, LOW);
-  cmd = SPI.transfer(CMD_RTC_YEAR); // command (0x11)
-  res = SPI.transfer(rtc_year);     // year
-  digitalWrite(PIN_SS, HIGH);
-  SPI.endTransaction();
-  if (cmd > 0) {
-    process_in_cmd(cmd, res);
-  }
+void rtc_send(uint8_t reg, uint8_t data) {
 
-  SPI.beginTransaction(settingsA);
-  digitalWrite(PIN_SS, LOW);
-  cmd = SPI.transfer(CMD_RTC_MONTH); // command (0x12)
-  res = SPI.transfer(rtc_month);     // month
-  digitalWrite(PIN_SS, HIGH);
-  SPI.endTransaction();
-  if (cmd > 0) {
-    process_in_cmd(cmd, res);
-  }
+#if DEBUG_MODE
+    Serial.print(F("RTC send: "));
+    Serial.print(F("\treg="));
+    Serial.print(reg, HEX);
+    Serial.print(F("\tdata="));
+    Serial.print(data);
+    Serial.println();
+#endif
 
-  SPI.beginTransaction(settingsA);
-  digitalWrite(PIN_SS, LOW);
-  cmd = SPI.transfer(CMD_RTC_DAY); // command (0x13)
-  res = SPI.transfer(rtc_day);     // day
-  digitalWrite(PIN_SS, HIGH);
-  SPI.endTransaction();
-  if (cmd > 0) {
-        process_in_cmd(cmd, res);
-  }
+  spi_send(CMD_RTC_READ + reg, data);
+}
 
-  SPI.beginTransaction(settingsA);
-  digitalWrite(PIN_SS, LOW);
-  cmd = SPI.transfer(CMD_RTC_HOURS); // command (0x14)
-  res = SPI.transfer(rtc_hours);     // hours
-  digitalWrite(PIN_SS, HIGH);
-  SPI.endTransaction();
-  if (cmd > 0) {
-    process_in_cmd(cmd, res);
-  }
+void rtc_send_time() {
+  rtc_send(0, rtc_seconds);
+  rtc_send(2, rtc_minutes);
+  rtc_send(4, rtc_hours);
+  rtc_send(7, rtc_day);
+  rtc_send(8, rtc_month);
+  rtc_send(9, lowByte(rtc_year)); // TODO
+}
 
-  SPI.beginTransaction(settingsA);
-  digitalWrite(PIN_SS, LOW);
-  cmd = SPI.transfer(CMD_RTC_MINUTES); // command (0x15)
-  res = SPI.transfer(rtc_minutes);     // minutes
-  digitalWrite(PIN_SS, HIGH);
-  SPI.endTransaction();
-  if (cmd > 0) {
-    process_in_cmd(cmd, res);
-  }
-
-  SPI.beginTransaction(settingsA);
-  digitalWrite(PIN_SS, LOW);
-  cmd = SPI.transfer(CMD_RTC_SECONDS); // command (0x16)
-  res = SPI.transfer(rtc_seconds);     // seconds
-  digitalWrite(PIN_SS, HIGH);
-  SPI.endTransaction();
-  if (cmd > 0) {
-        process_in_cmd(cmd, res);
+void rtc_send_all() {
+  for (uint8_t reg; reg<64; reg++) {
+    switch (reg) {
+      case 0:
+        rtc_send(reg, rtc_seconds);
+      break;
+      case 1:
+        rtc_send(reg, rtc_seconds_alarm);
+      break;
+      case 2:
+        rtc_send(reg, rtc_minutes);
+      break;
+      case 3:
+        rtc_send(reg, rtc_minutes_alarm);
+      break;
+      case 4:
+        rtc_send(reg, rtc_hours);
+      break;
+      case 5:
+        rtc_send(reg, rtc_hours_alarm);
+      break;
+      case 6:
+        rtc_send(reg, rtc_week);
+      break;
+      case 7:
+        rtc_send(reg, rtc_day);
+      break;
+      case 8:
+        rtc_send(reg, rtc_month);
+      break;
+      case 9:
+        rtc_send(reg, lowByte(rtc_year)); // TODO
+      break;
+      default:
+        rtc_send(reg, EEPROM.read(EEPROM_RTC_OFFSET + reg));
+   } 
   }
 }
 
 void process_in_cmd(uint8_t cmd, uint8_t data)
 {
-  switch (cmd) {
-    case CMD_RTC_SEND_YEAR:
-      tmp_rtc_year = data;
-    break;
-    case CMD_RTC_SEND_MONTH:
-      tmp_rtc_month = data;
-    break;
-    case CMD_RTC_SEND_DAY:
-      tmp_rtc_day = data;
-    break;
-    case CMD_RTC_SEND_HOURS:
-      tmp_rtc_hours = data;
-    break;
-    case CMD_RTC_SEND_MINUTES:
-      tmp_rtc_minutes = data;
-    break;
-    case CMD_RTC_SEND_SECONDS:
-      tmp_rtc_seconds = data;
-    break;
-    case CMD_RTC_SAVE:
-      rtc.setDateTime(tmp_rtc_year, tmp_rtc_month, tmp_rtc_day, tmp_rtc_hours, tmp_rtc_minutes, tmp_rtc_seconds);
-      rtc_year = tmp_rtc_year;
-      rtc_month = tmp_rtc_month;
-      rtc_day = tmp_rtc_day;
-      rtc_minutes = tmp_rtc_minutes;
-      rtc_hours = tmp_rtc_hours;
-      rtc_seconds = tmp_rtc_seconds;
-    break;  
+  uint8_t reg;
+  if (cmd >= CMD_RTC_READ && cmd < CMD_RTC_WRITE) {
+   // read rtc register
+   reg = cmd - CMD_RTC_READ;
+   switch (reg) {
+      case 0:
+        rtc_send(reg, rtc_seconds);
+      break;
+      case 1:
+        rtc_send(reg, rtc_seconds_alarm);
+      break;
+      case 2:
+        rtc_send(reg, rtc_minutes);
+      break;
+      case 3:
+        rtc_send(reg, rtc_minutes_alarm);
+      break;
+      case 4:
+        rtc_send(reg, rtc_hours);
+      break;
+      case 5:
+        rtc_send(reg, rtc_hours_alarm);
+      break;
+      case 6:
+        rtc_send(reg, rtc_week);
+      break;
+      case 7:
+        rtc_send(reg, rtc_day);
+      break;
+      case 8:
+        rtc_send(reg, rtc_month);
+      break;
+      case 9:
+        rtc_send(reg, lowByte(rtc_year)); // TODO
+      break;
+      default:
+        rtc_send(reg, EEPROM.read(EEPROM_RTC_OFFSET + reg));
+   }
+  } else if (cmd >= CMD_RTC_WRITE) {
+    // write rtc register
+   reg = cmd - CMD_RTC_WRITE;
+
+#if DEBUG_MODE
+    Serial.print(F("RTC write: "));
+    Serial.print(F("\treg="));
+    Serial.print(reg, HEX);
+    Serial.print(F("\tdata="));
+    Serial.print(data);
+    Serial.println();
+#endif
+   
+   switch (reg) {
+      case 0:
+        rtc_seconds = data;
+        rtc_save();
+      break;
+      case 1:
+        rtc_seconds_alarm = data;
+      break;
+      case 2:
+        rtc_minutes = data;
+        rtc_save();
+      break;
+      case 3:
+        rtc_minutes_alarm = data;
+      break;
+      case 4:
+        rtc_hours = data;
+        rtc_save();
+      break;
+      case 5:
+        rtc_hours_alarm = data;
+      break;
+      case 6:
+        rtc_week = data;
+      break;
+      case 7:
+        rtc_day = data;
+        rtc_save();
+      break;
+      case 8:
+        rtc_month = data;
+        rtc_save();
+      break;
+      case 9:
+        rtc_year = 2000 + data; // TODO
+        rtc_save();
+      break;
+      default:
+        EEPROM.update(EEPROM_RTC_OFFSET + reg, data);
+   }
   }
 }
 
@@ -640,6 +692,7 @@ void init_mouse()
 // initial setup
 void setup()
 {
+  Serial.begin(115200);
   SPI.begin();
 
   pinMode(PIN_SS, OUTPUT);
@@ -680,32 +733,41 @@ void setup()
   // apply turbo and mode
 
 #if DEBUG_MODE
-  Serial.begin(115200);
   Serial.println(F("ZX Keyboard / mouse controller v1.0"));
   Serial.println(F("Keyboard init..."));
 #endif
 
-do_reset();
+  do_reset();
 
-kbd.begin(PIN_KBD_DAT, PIN_KBD_CLK);
+  kbd.begin(PIN_KBD_DAT, PIN_KBD_CLK);
 
 #if DEBUG_MODE
   Serial.println(F("done"));
   Serial.println(F("Mouse init..."));
 #endif
 
-init_mouse();
+  init_mouse();
 
-digitalWrite(PIN_BUSY, LOW);
+  rtc_year = rtc.getYear();
+  rtc_month = rtc.getMonth();
+  rtc_day = rtc.getDay();
+
+  rtc_hours = rtc.getHour();
+  rtc_minutes = rtc.getMinute();
+  rtc_seconds = rtc.getSecond();
+
+  rtc_send_all();
+
+  digitalWrite(PIN_BUSY, LOW);
   
 }
 
 void do_reset()
 {
   digitalWrite(PIN_RESET, LOW);
-  delay(10);
-  clear_matrix(41);
+  clear_matrix(ZX_MATRIX_SIZE);
   transmit_keyboard_matrix();
+  delay(10);
   digitalWrite(PIN_RESET, HIGH);
 }
 
@@ -775,6 +837,7 @@ void loop()
     blink_state = false;
   }
 
+  // read time from rtc
   if (n - tr >= 1000) {
 
     rtc_year = rtc.getYear();
@@ -785,9 +848,19 @@ void loop()
     rtc_minutes = rtc.getMinute();
     rtc_seconds = rtc.getSecond();
 
-    tr = n;
+#if DEBUG_MODE
+    Serial.print(F("RTC: "));
+    Serial.print(rtc_hours);
+    Serial.print(F(":"));
+    Serial.print(rtc_minutes);
+    Serial.print(F(":"));
+    Serial.print(rtc_seconds);
+    Serial.println();
+#endif
 
-    transmit_rtc_data();
+    rtc_send_time();
+
+    tr = n;
   }
 
   // try to re-init mouse every 1s if not present, up to N tries
@@ -821,15 +894,17 @@ void loop()
     t = n;
 
 #if DEBUG_MODE
-    Serial.print(F("Mouse: "));
-    Serial.print(m.status, BIN);
-    Serial.print(F("\tx="));
-    Serial.print(m.position.x);
-    Serial.print(F("\ty="));
-    Serial.print(m.position.y);
-    Serial.print(F("\tw="));
-    Serial.print(m.wheel);
-    Serial.println();
+    if (mouse_x != 0 && mouse_y != 0) {
+      Serial.print(F("Mouse: "));
+      Serial.print(m.status, BIN);
+      Serial.print(F("\tx="));
+      Serial.print(m.position.x);
+      Serial.print(F("\ty="));
+      Serial.print(m.position.y);
+      Serial.print(F("\tw="));
+      Serial.print(m.wheel);
+      Serial.println();
+    }
 #endif
 
   }

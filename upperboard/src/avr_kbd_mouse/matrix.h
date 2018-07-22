@@ -85,21 +85,11 @@
 #define CMD_MOUSE_Y 0x0B
 #define CMD_MOUSE_Z 0x0C
 
-// rtc commands
-#define CMD_RTC_YEAR 0x11
-#define CMD_RTC_MONTH 0x12
-#define CMD_RTC_DAY 0x13
-#define CMD_RTC_HOURS 0x14
-#define CMD_RTC_MINUTES 0x15
-#define CMD_RTC_SECONDS 0x16
+// RTC commands
+#define CMD_RTC_READ 0x40 // + regnum 0e-3f (64 + 0...63)
+#define CMD_RTC_WRITE 0x80 // + regnum 0e-3f (128 + 0...63)
 
-#define CMD_RTC_SEND_YEAR 0x21
-#define CMD_RTC_SEND_MONTH 0x22
-#define CMD_RTC_SEND_DAY 0x23
-#define CMD_RTC_SEND_HOURS 0x24
-#define CMD_RTC_SEND_MINUTES 0x25
-#define CMD_RTC_SEND_SECONDS 0x26
-#define CMD_RTC_SAVE 0x27
+#define CMD_NONE 0xFF
 
 #endif
 

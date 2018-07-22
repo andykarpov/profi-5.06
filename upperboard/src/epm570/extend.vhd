@@ -318,10 +318,20 @@ signal ms_y_bus 			: std_logic_vector(7 downto 0);
 signal ms_z_bus 			: std_logic_vector(3 downto 0);
 signal ms_b_bus 			: std_logic_vector(2 downto 0);
 
+-------------------- rtc ----------------------------
+signal mc146818_wr 		: std_logic;
+signal mc146818_a_bus 	: std_logic_vector(5 downto 0);
+signal mc146818_do_bus 	: std_logic_vector(7 downto 0);
+signal cs_bff7 			: std_logic;
+signal cs_dff7 			: std_logic;
+signal cs_eff7 			: std_logic;
+signal reg_eff7			: std_logic_vector(7 downto 0);
+signal iorqge_bff7  		: std_logic;
+
 begin
 
 f14 <= not zx14mhz;
-iorqge <= spi_iorqge or hdd_iorqge or not saa_cs or iorq_z or iorqge_sl or iorqge_7ffd or iorqge_dffd or iorqge_fe;
+iorqge <= spi_iorqge or hdd_iorqge or not saa_cs or iorq_z or iorqge_sl or iorqge_7ffd or iorqge_dffd or iorqge_fe or iorqge_bff7;
 
 ----------------Z80-Synchronization---------------------
 process(f14)
@@ -393,12 +403,12 @@ end process;
 
 process(f14,cs_7ffd,cs_dffd,rd)
 	begin
-		if f14'event and f14='1' then
-			iorqge_7ffd <= not cs_7ffd and not rd;
-			iorqge_dffd <= not cs_dffd and not rd;
-        end if;
-    end process;
-	 
+	if f14'event and f14='1' then
+		iorqge_7ffd <= not cs_7ffd and not rd;
+		iorqge_dffd <= not cs_dffd and not rd;
+	  end if;
+ end process;
+
 -- FE port 
 cs_fe <= adress(0) or iorq;
 iorqge_fe <= not cs_fe and not rd;
@@ -409,9 +419,9 @@ floppy_oe <= not csff and cswg;
 sound_oe <= fon and not CHAN_A and not CHAN_B and not CHAN_C and not CHAN_D and CSFFFD and saa_cs and port_fffc_cs;
 
 t_ap6 <= (rd or not wr or not m1_z) and FI and cache_rd and ms_port;
-csap6 <= not drive_oe and floppy_oe and sound_oe and vv55_cs and vi53_cs and vv51_cs and P4I and FI and cs_dffd and cs_7ffd and cache_en and cache_cs and cs_fe and ms_port;
+csap6 <= not drive_oe and floppy_oe and sound_oe and vv55_cs and vi53_cs and vv51_cs and P4I and FI and cs_dffd and cs_7ffd and cache_en and cache_cs and cs_fe and ms_port and cs_bff7 and cs_eff7 and cs_dff7;
 oe_ap6 <= csap6;-- and m1_z;
-t_lvc245 <= (rd or not wr or not m1_z or (not spi_iorqge and not csff and not iorqge_7ffd and not iorqge_dffd and not iorqge_fe)) and FI and ms_port;
+t_lvc245 <= (rd or not wr or not m1_z or (not spi_iorqge and not csff and not iorqge_7ffd and not iorqge_dffd and not iorqge_fe and not iorqge_bff7)) and FI and ms_port;
 
 ----------------VV55------------------------
 RT_F5 <='0' when adress(7)='0' and adress(1 downto 0)="11" and iorq='0' and CPM='1' and dos='1' else '1';
@@ -814,11 +824,13 @@ begin
 	elsif (cs_fe='0' and rd='0') then  --elsif (cs_fe='0' and rd='0' and wr='1' and m1='1') then 
 		Data <= "ZZ" & kbus(5 downto 0);
 	elsif	(iorq = '0' and rd = '0' and adress(15 downto 0) = "1111101011011111") then -- Mouse Port FADF[11111010_11011111] = <Z>1<MB><LB><RB>
-		data <= ms_z_bus(3 downto 0) & '1' & ms_b_bus(2 downto 0);
+		Data <= ms_z_bus(3 downto 0) & '1' & ms_b_bus(2 downto 0);
 	elsif	(iorq = '0' and rd = '0' and adress(15 downto 0) = "1111101111011111") then
-		data <= ms_x_bus;	-- Port FBDF[11111011_11011111] = <X>
+		Data <= ms_x_bus;	-- Port FBDF[11111011_11011111] = <X>
 	elsif (iorq = '0' and rd = '0' and adress(15 downto 0) = "1111111111011111") then
-		data <= ms_y_bus;  -- Port FFDF[11111111_11011111] = <Y>
+		Data <= ms_y_bus;  -- Port FFDF[11111111_11011111] = <Y>
+	elsif (iorq = '0' and rd = '0' and cs_bff7 = '0' and reg_eff7(7) = '1') then 
+		Data <= mc146818_do_bus;
 	else
 		Data <= "ZZZZZZZZ"; 
 end if; 
@@ -865,6 +877,7 @@ PORT MAP (
     AVR_SCK => AVR_SCK,
     AVR_MISO => AVR_MISO,
 	 AVR_SS => AVR_SS,
+
 	 -- OUTPUTS
 	 KB => kbus,
 	 MS_X => ms_x_bus,
@@ -872,12 +885,11 @@ PORT MAP (
 	 MS_Z => ms_z_bus,
 	 MS_BTNS => ms_b_bus,
 	 
-	 -- RTC TODO
-	 RTC_A => (others => '0'),
-	 RTC_DI => (others => '0'),
-	 RTC_DO => open,
-	 RTC_WR => '0',
-	 RTC_CS => '0'
+	 -- RTC
+	 RTC_A => mc146818_a_bus(5 downto 0),
+	 RTC_DI => Data,
+	 RTC_DO => mc146818_do_bus,
+	 RTC_WR_N => mc146818_wr
 );
 
 kbus_cs <= '0' when cs_fe='0' and rd='0' else '1';
@@ -887,6 +899,31 @@ ms_port_fbdf <= '0' when	(iorq = '0' and rd = '0' and adress(15 downto 0) = "111
 ms_port_ffdf <= '0' when	(iorq = '0' and rd = '0' and adress(15 downto 0) = "1111111111011111" and iorqge = '0') else '1'; -- Port FFDF[11111111_11011111] = <Y>
 ms_port <= ms_port_fadf and ms_port_fbdf and ms_port_ffdf;
 
+-- rtc
+cs_eff7 <= '0' when adress(15 downto 0) = X"EFF7" and iorq='0' else '1';
+cs_dff7 <= '0' when adress(15 downto 0) = X"DFF7" and iorq='0' else '1';
+cs_bff7 <= '0' when adress(15 downto 0) = X"BFF7" and iorq='0' and reg_eff7(7)='1' else '1'; --and m1 = '1'
+mc146818_wr <= '0' when cs_bff7 = '0' and wr='0' else '1';
+iorqge_bff7 <= not cs_bff7 and not rd;
+ 
+process(f14,res,cs_eff7,Data)
+begin
+	if res='0' then 
+		reg_eff7 <= (others => '0');
+	elsif  f14'event and f14='1' then
+		if (cs_eff7='0' and wr='0') then 
+			reg_eff7 <= Data;
+		end if;
+	end if;
+end process;
 
+process(f14,res,reg_eff7)
+begin 
+	if f14'event and f14='1' then 
+		if (res='1' and cs_dff7='0' and wr='0' and reg_eff7(7)='1') then 
+			mc146818_a_bus <= Data(5 downto 0);
+		end if;
+	end if;
+end process;
 
 end extend_arch;
