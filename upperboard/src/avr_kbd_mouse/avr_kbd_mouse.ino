@@ -87,6 +87,14 @@ uint8_t rtc_minutes_alarm = 0;
 uint8_t rtc_hours_alarm = 0;
 uint8_t rtc_week = 0;
 
+uint8_t rtc_last_reg = 0;
+uint8_t etc_last_data = 0;
+
+const int buf_len = 128; 
+char buf[buf_len];
+byte index = 0;
+bool buffering = true;
+
 SPISettings settingsA(8000000, MSBFIRST, SPI_MODE0); // SPI transmission settings
 
 // transform PS/2 scancodes into internal matrix of pressed keys
@@ -514,7 +522,7 @@ void transmit_mouse_data()
 }
 
 void rtc_save() {
-  rtc.setDateTime(rtc_year, rtc_month, rtc_day, rtc_hours, rtc_minutes, rtc_seconds);
+  rtc.setDateTime(rtc_seconds, rtc_minutes, rtc_hours, rtc_day, rtc_month, rtc_year);
 }
 
 void rtc_send(uint8_t reg, uint8_t data) {
@@ -582,44 +590,7 @@ void rtc_send_all() {
 void process_in_cmd(uint8_t cmd, uint8_t data)
 {
   uint8_t reg;
-  if (cmd >= CMD_RTC_READ && cmd < CMD_RTC_WRITE) {
-   // read rtc register
-   reg = cmd - CMD_RTC_READ;
-   switch (reg) {
-      case 0:
-        rtc_send(reg, rtc_seconds);
-      break;
-      case 1:
-        rtc_send(reg, rtc_seconds_alarm);
-      break;
-      case 2:
-        rtc_send(reg, rtc_minutes);
-      break;
-      case 3:
-        rtc_send(reg, rtc_minutes_alarm);
-      break;
-      case 4:
-        rtc_send(reg, rtc_hours);
-      break;
-      case 5:
-        rtc_send(reg, rtc_hours_alarm);
-      break;
-      case 6:
-        rtc_send(reg, rtc_week);
-      break;
-      case 7:
-        rtc_send(reg, rtc_day);
-      break;
-      case 8:
-        rtc_send(reg, rtc_month);
-      break;
-      case 9:
-        rtc_send(reg, lowByte(rtc_year)); // TODO
-      break;
-      default:
-        rtc_send(reg, EEPROM.read(EEPROM_RTC_OFFSET + reg));
-   }
-  } else if (cmd >= CMD_RTC_WRITE) {
+  if (cmd >= CMD_RTC_WRITE && cmd < CMD_RTC_WRITE+63) {
     // write rtc register
    reg = cmd - CMD_RTC_WRITE;
 
@@ -633,29 +604,13 @@ void process_in_cmd(uint8_t cmd, uint8_t data)
 #endif
    
    switch (reg) {
-      case 0:
-        rtc_seconds = data;
-        rtc_save();
-      break;
-      case 1:
-        rtc_seconds_alarm = data;
-      break;
       case 2:
         rtc_minutes = data;
         rtc_save();
       break;
-      case 3:
-        rtc_minutes_alarm = data;
-      break;
       case 4:
         rtc_hours = data;
         rtc_save();
-      break;
-      case 5:
-        rtc_hours_alarm = data;
-      break;
-      case 6:
-        rtc_week = data;
       break;
       case 7:
         rtc_day = data;
@@ -669,8 +624,6 @@ void process_in_cmd(uint8_t cmd, uint8_t data)
         rtc_year = 2000 + data; // TODO
         rtc_save();
       break;
-      default:
-        EEPROM.update(EEPROM_RTC_OFFSET + reg, data);
    }
   }
 }
@@ -687,79 +640,6 @@ void init_mouse()
   }
 #endif
 
-}
-
-// initial setup
-void setup()
-{
-  Serial.begin(115200);
-  SPI.begin();
-
-  pinMode(PIN_SS, OUTPUT);
-  digitalWrite(PIN_SS, HIGH);
-
-  pinMode(PIN_BUSY, OUTPUT);
-  digitalWrite(PIN_BUSY, HIGH);
-
-  // ps/2
-
-  pinMode(PIN_KBD_CLK, INPUT_PULLUP);
-  pinMode(PIN_KBD_DAT, INPUT_PULLUP);
-
-  pinMode(PIN_MOUSE_CLK, INPUT_PULLUP);
-  pinMode(PIN_MOUSE_DAT, INPUT_PULLUP);
-  
-  // zx signals (output)
-
-  pinMode(PIN_RESET, OUTPUT);
-  digitalWrite(PIN_RESET, HIGH);
-
-  pinMode(PIN_TURBO, OUTPUT);
-  digitalWrite(PIN_TURBO, HIGH);
-
-  pinMode(PIN_MAGIC, OUTPUT);
-  digitalWrite(PIN_MAGIC, HIGH);
-
-  // uart
-  pinMode(PIN_ICTS, INPUT_PULLUP);
-  pinMode(PIN_ORTS, OUTPUT);
-
-  // clear full matrix
-  clear_matrix(ZX_MATRIX_SIZE);
-
-  // restore saved modes from EEPROM
-  eeprom_restore_values();
-
-  // apply turbo and mode
-
-#if DEBUG_MODE
-  Serial.println(F("ZX Keyboard / mouse controller v1.0"));
-  Serial.println(F("Keyboard init..."));
-#endif
-
-  do_reset();
-
-  kbd.begin(PIN_KBD_DAT, PIN_KBD_CLK);
-
-#if DEBUG_MODE
-  Serial.println(F("done"));
-  Serial.println(F("Mouse init..."));
-#endif
-
-  init_mouse();
-
-  rtc_year = rtc.getYear();
-  rtc_month = rtc.getMonth();
-  rtc_day = rtc.getDay();
-
-  rtc_hours = rtc.getHour();
-  rtc_minutes = rtc.getMinute();
-  rtc_seconds = rtc.getSecond();
-
-  rtc_send_all();
-
-  digitalWrite(PIN_BUSY, LOW);
-  
 }
 
 void do_reset()
@@ -810,6 +690,211 @@ void eeprom_store_values()
   eeprom_store_value(EEPROM_TURBO_ADDRESS, is_turbo);
   eeprom_store_value(EEPROM_MODE_ADDRESS, profi_mode);
 }
+
+void checkSerialInput()
+{
+  readLine();
+   if (!buffering) {
+     processInput();
+     index = 0;
+     buf[index] = '\0';
+     buffering = true;
+   }
+}
+
+void readLine() {
+   if (Serial.available())  {
+     while (Serial.available()) {
+         char c = Serial.read();
+         if (c == '\n' || c == '\r' || index >= buf_len) {
+           buffering = false;
+         } else {
+           buffering = true;
+           buf[index] = c;
+           index++;
+           buf[index] = '\0';
+         }
+     }
+   }
+ }
+
+ void processInput() {
+     String content = String(buf);
+
+    if (content.compareTo("HELP") == 0) {
+      Serial.println(F("HELP:"));
+      Serial.println(F("GET - will print a current date/time"));
+      Serial.println(F("SET YYYY MM DD HH II SS - will set RTC to the given arguments"));
+      Serial.println();
+      return;
+    }
+
+    if (content.compareTo("GET") == 0) {
+      Serial.println(F("GET:"));
+      Serial.println(F("Current time is:"));
+      printTime();
+      Serial.println();
+      return;
+    }
+
+    if (content.indexOf("SET") == 0) {
+      if (content.length() == 23) {
+
+        String s_year = content.substring(4, 8);
+        String s_month = content.substring(9, 11);
+        String s_day = content.substring(12, 14);
+        String s_hour = content.substring(15, 17);
+        String s_min = content.substring(18, 20);
+        String s_sec = content.substring(21, 23);
+
+        rtc_year = stringToInt(s_year);
+        rtc_month = stringToByte(s_month);
+        rtc_day = stringToByte(s_day);
+        rtc_hours = stringToByte(s_hour);
+        rtc_minutes = stringToByte(s_min);
+        rtc_seconds = stringToByte(s_sec);
+        rtc_save();
+
+        Serial.print(F("Year: "));
+        Serial.println(rtc_year);
+        Serial.print(F("Month: "));
+        Serial.println(rtc_month);
+        Serial.print(F("Day: "));
+        Serial.println(rtc_day);
+        Serial.print(F("Hours: "));
+        Serial.println(rtc_hours);
+        Serial.print(F("Minutes: "));
+        Serial.println(rtc_minutes);
+        Serial.print(F("Seconds: "));
+        Serial.println(rtc_seconds);        
+        
+        Serial.println(F("Set time OK"));
+        Serial.println();
+      } else {
+        Serial.println(F("Invalid format given. Please use the command to set date time: SET YYYY MM DD HH II SS"));
+        Serial.println();
+      }
+    }
+ }
+
+void printTime() {
+  Serial.print(rtc_year);
+  Serial.print(F("-"));
+  Serial.print(rtc_month);
+  Serial.print(F("-"));
+  Serial.print(rtc_day);
+  Serial.print(F(" "));
+  Serial.print(rtc_hours);
+  Serial.print(F(":"));
+  Serial.print(rtc_minutes);
+  Serial.print(F(":"));
+  Serial.print(rtc_seconds);
+  Serial.println();
+}
+
+int stringToInt(String s) {
+     char this_char[s.length() + 1];
+     s.toCharArray(this_char, sizeof(this_char));
+     int result = atoi(this_char);     
+     return result;
+}
+
+uint8_t stringToByte(String s) {
+     char this_char[s.length() + 1];
+     s.toCharArray(this_char, sizeof(this_char));
+     int result = atoi(this_char);
+     return lowByte(result);
+}
+
+// initial setup
+void setup()
+{
+  Serial.begin(115200);
+  Serial.flush();
+  SPI.begin();
+
+  pinMode(PIN_SS, OUTPUT);
+  digitalWrite(PIN_SS, HIGH);
+
+  pinMode(PIN_BUSY, OUTPUT);
+  digitalWrite(PIN_BUSY, HIGH);
+
+  // ps/2
+
+  pinMode(PIN_KBD_CLK, INPUT_PULLUP);
+  pinMode(PIN_KBD_DAT, INPUT_PULLUP);
+
+  pinMode(PIN_MOUSE_CLK, INPUT_PULLUP);
+  pinMode(PIN_MOUSE_DAT, INPUT_PULLUP);
+  
+  // zx signals (output)
+
+  pinMode(PIN_RESET, OUTPUT);
+  digitalWrite(PIN_RESET, HIGH);
+
+  pinMode(PIN_TURBO, OUTPUT);
+  digitalWrite(PIN_TURBO, HIGH);
+
+  pinMode(PIN_MAGIC, OUTPUT);
+  digitalWrite(PIN_MAGIC, HIGH);
+
+  // uart
+  pinMode(PIN_ICTS, INPUT_PULLUP);
+  pinMode(PIN_ORTS, OUTPUT);
+
+  // clear full matrix
+  clear_matrix(ZX_MATRIX_SIZE);
+
+  // restore saved modes from EEPROM
+  eeprom_restore_values();
+
+Serial.println(F("ZX Keyboard / mouse controller v1.1"));
+
+#if DEBUG_MODE
+  Serial.println(F("Reset on boot..."));
+#endif
+
+  do_reset();
+
+#if DEBUG_MODE
+  Serial.println(F("done"));
+  Serial.println(F("Keyboard init..."));
+#endif
+
+  kbd.begin(PIN_KBD_DAT, PIN_KBD_CLK);
+
+#if DEBUG_MODE
+  Serial.println(F("done"));
+  Serial.println(F("Mouse init..."));
+#endif
+
+  init_mouse();
+
+#if DEBUG_MODE
+  Serial.println(F("done"));
+  Serial.println(F("RTC init..."));
+#endif
+
+  rtc_year = rtc.getYear();
+  rtc_month = rtc.getMonth();
+  rtc_day = rtc.getDay();
+
+  rtc_hours = rtc.getHour();
+  rtc_minutes = rtc.getMinute();
+  rtc_seconds = rtc.getSecond();
+
+  rtc_send_time();
+
+#if DEBUG_MODE
+  Serial.println(F("done"));
+#endif
+
+  Serial.println(F("Builtin commands: HELP, SET, GET"));
+
+  digitalWrite(PIN_BUSY, LOW);
+  
+}
+
 
 // main loop
 void loop()
@@ -908,6 +993,8 @@ void loop()
 #endif
 
   }
+
+  checkSerialInput();
   
 }
 

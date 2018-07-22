@@ -54,7 +54,6 @@ architecture RTL of cpld_kbd is
 	 signal spi_do_valid : std_logic := '0';
 	 signal spi_do : std_logic_vector(15 downto 0);
 	 signal spi_di : std_logic_vector(15 downto 0);
-	 signal spi_dreq : std_logic := '0';
 	 
 	 -- rtc 
 	 signal rtc_cmd : std_logic_vector(7 downto 0);
@@ -81,7 +80,7 @@ U_SPI: entity work.spi_slave
         spi_mosi_i     => AVR_MOSI,
         spi_miso_o     => AVR_MISO,
 
-        di_req_o       => spi_dreq,
+        di_req_o       => open,
         di_i           => spi_di,
         wren_i         => '1',
         do_valid_o     => spi_do_valid,
@@ -99,9 +98,8 @@ U_SPI: entity work.spi_slave
 process (CLK, spi_do_valid, spi_do)
 begin
 	if (rising_edge(CLK)) then
-		if (spi_do_valid = '1') then 
+		if spi_do_valid = '1' then
 			case spi_do(15 downto 8) is 
-
 				-- keyboard matrix
 				when X"01" => kb_data(7 downto 0) <= spi_do (7 downto 0);
 				when X"02" => kb_data(15 downto 8) <= spi_do (7 downto 0);
@@ -255,7 +253,6 @@ process(RTC_A, seconds_reg, minutes_reg, hours_reg, days_reg, month_reg, year_re
 			
 			when "001010" => RTC_DO <= "00100110"; -- a_reg;
 			when "001011" => RTC_DO <= "00000110"; -- b_reg;
-			when "001100" => RTC_DO <= "00000000"; -- c_reg;
 			when "001101" => RTC_DO <= "10000000"; -- hardcoded d_reg
 			when others => RTC_DO <= "00000000";
 		end case;
@@ -272,17 +269,17 @@ process(RTC_A, seconds_reg, minutes_reg, hours_reg, days_reg, month_reg, year_re
 				-- RTC register set
 				if RTC_WR_N = '0' then
 					case RTC_A(5 downto 0) is
-						when "000000" => seconds_reg <= RTC_DI(5 downto 0); 
-						when "000010" => minutes_reg <= RTC_DI(5 downto 0); 
-						when "000100" => hours_reg <= RTC_DI(4 downto 0); 
-						when "000111" => days_reg <= RTC_DI(4 downto 0); 
-						when "001000" => month_reg <= RTC_DI(3 downto 0); 
-						when "001001" => year_reg <= RTC_DI(6 downto 0); 
-						when others => null; 
+						when "000000" => seconds_reg <= RTC_DI(5 downto 0);  
+						when "000010" => minutes_reg <= RTC_DI(5 downto 0);
+						when "000100" => hours_reg <= RTC_DI(4 downto 0);
+						when "000111" => days_reg <= RTC_DI(4 downto 0);
+						when "001000" => month_reg <= RTC_DI(3 downto 0);
+						when "001001" => year_reg <= RTC_DI(6 downto 0);
+						when others => null; -- nop
 					end case;
 					spi_di <= "10" & RTC_A & RTC_DI;
 				
-				-- RTC transmission from atmega
+				-- RTC incoming time from atmega (every seconds)
 				elsif rtc_cmd(7 downto 6) = "01" then 
 					case rtc_cmd(5 downto 0) is 
 						when "000000" => seconds_reg <= rtc_data(5 downto 0);

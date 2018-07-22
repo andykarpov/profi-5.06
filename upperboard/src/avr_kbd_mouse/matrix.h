@@ -89,6 +89,8 @@
 #define CMD_RTC_READ 0x40 // + regnum 0e-3f (64 + 0...63)
 #define CMD_RTC_WRITE 0x80 // + regnum 0e-3f (128 + 0...63)
 
+#define CMD_RTC_WRITE_OK 0xFD // write done
+#define CMD_RTC_READY 0xFE // ready for next write
 #define CMD_NONE 0xFF
 
 #endif
