@@ -53,7 +53,7 @@ architecture RTL of cpld_kbd is
 	 -- spi
 	 signal spi_do_valid : std_logic := '0';
 	 signal spi_do : std_logic_vector(15 downto 0);
-	 signal spi_di : std_logic_vector(15 downto 0);
+--	 signal spi_di : std_logic_vector(15 downto 0);
 	 
 	 -- rtc 
 	 signal rtc_cmd : std_logic_vector(7 downto 0);
@@ -63,6 +63,7 @@ architecture RTL of cpld_kbd is
 	 signal seconds_reg			: std_logic_vector(5 downto 0); -- 00
 	 signal minutes_reg			: std_logic_vector(5 downto 0); -- 02
 	 signal hours_reg			: std_logic_vector(4 downto 0); -- 04
+	 signal week_reg 			: std_logic_vector(2 downto 0); --06
 	 signal days_reg				: std_logic_vector(4 downto 0); -- 07
 	 signal month_reg			: std_logic_vector(3 downto 0); -- 08
 	 signal year_reg				: std_logic_vector(6 downto 0); -- 09
@@ -81,8 +82,8 @@ U_SPI: entity work.spi_slave
         spi_miso_o     => AVR_MISO,
 
         di_req_o       => open,
-        di_i           => spi_di,
-        wren_i         => '1',
+        di_i           => open, --spi_di,
+        wren_i         => '0', --'1',
         do_valid_o     => spi_do_valid,
         do_o           => spi_do,
 
@@ -247,6 +248,7 @@ process(RTC_A, seconds_reg, minutes_reg, hours_reg, days_reg, month_reg, year_re
 			when "000000" => RTC_DO <= "00" & seconds_reg;
 			when "000010" => RTC_DO <= "00" & minutes_reg;
 			when "000100" => RTC_DO <= "000" & hours_reg;
+			when "000110" => RTC_DO <= "00000" & week_reg;
 			when "000111" => RTC_DO <= "000" & days_reg;
 			when "001000" => RTC_DO <= "0000" & month_reg;
 			when "001001" => RTC_DO <= "0" & year_reg;
@@ -268,16 +270,17 @@ process(RTC_A, seconds_reg, minutes_reg, hours_reg, days_reg, month_reg, year_re
 			
 				-- RTC register set
 				if RTC_WR_N = '0' then
-					case RTC_A(5 downto 0) is
-						when "000000" => seconds_reg <= RTC_DI(5 downto 0);  
-						when "000010" => minutes_reg <= RTC_DI(5 downto 0);
-						when "000100" => hours_reg <= RTC_DI(4 downto 0);
-						when "000111" => days_reg <= RTC_DI(4 downto 0);
-						when "001000" => month_reg <= RTC_DI(3 downto 0);
-						when "001001" => year_reg <= RTC_DI(6 downto 0);
-						when others => null; -- nop
-					end case;
-					spi_di <= "10" & RTC_A & RTC_DI;
+--					case RTC_A(5 downto 0) is
+--						when "000000" => seconds_reg <= RTC_DI(5 downto 0);  
+--						when "000010" => minutes_reg <= RTC_DI(5 downto 0);
+--						when "000100" => hours_reg <= RTC_DI(4 downto 0);
+--						when "000110" => week_reg <= RTC_DI(2 downto 0);
+--						when "000111" => days_reg <= RTC_DI(4 downto 0);
+--						when "001000" => month_reg <= RTC_DI(3 downto 0);
+--						when "001001" => year_reg <= RTC_DI(6 downto 0);
+--						when others => null; -- nop
+--					end case;
+--					spi_di <= "10" & RTC_A & RTC_DI;
 				
 				-- RTC incoming time from atmega (every seconds)
 				elsif rtc_cmd(7 downto 6) = "01" then 
@@ -285,6 +288,7 @@ process(RTC_A, seconds_reg, minutes_reg, hours_reg, days_reg, month_reg, year_re
 						when "000000" => seconds_reg <= rtc_data(5 downto 0);
 						when "000010" => minutes_reg <= rtc_data(5 downto 0);
 						when "000100" => hours_reg <= rtc_data(4 downto 0);
+						when "000110" => week_reg <= rtc_data(2 downto 0);
 						when "000111" => days_reg <= rtc_data(4 downto 0);
 						when "001000" => month_reg <= rtc_data(3 downto 0);
 						when "001001" => year_reg <= rtc_data(6 downto 0);
