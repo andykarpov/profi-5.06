@@ -522,7 +522,7 @@ void transmit_mouse_data()
 }
 
 void rtc_save() {
-  rtc.setDateTime(rtc_seconds, rtc_minutes, rtc_hours, rtc_day, rtc_month, rtc_year);
+  rtc.setDateTime(rtc_seconds, rtc_minutes, rtc_hours, rtc_day, rtc_month, rtc_year, rtc_week);
 }
 
 void rtc_send(uint8_t reg, uint8_t data) {
@@ -539,13 +539,19 @@ void rtc_send(uint8_t reg, uint8_t data) {
   spi_send(CMD_RTC_READ + reg, data);
 }
 
+uint8_t get_year(int year) {
+  int res = year % 100;
+  return lowByte(res);
+}
+
 void rtc_send_time() {
   rtc_send(0, rtc_seconds);
   rtc_send(2, rtc_minutes);
   rtc_send(4, rtc_hours);
+  rtc_send(6, rtc_week+1);
   rtc_send(7, rtc_day);
   rtc_send(8, rtc_month);
-  rtc_send(9, lowByte(rtc_year)); // TODO
+  rtc_send(9, get_year(rtc_year)); // TODO
 }
 
 void rtc_send_all() {
@@ -570,7 +576,7 @@ void rtc_send_all() {
         rtc_send(reg, rtc_hours_alarm);
       break;
       case 6:
-        rtc_send(reg, rtc_week);
+        rtc_send(reg, rtc_week+1);
       break;
       case 7:
         rtc_send(reg, rtc_day);
@@ -579,7 +585,7 @@ void rtc_send_all() {
         rtc_send(reg, rtc_month);
       break;
       case 9:
-        rtc_send(reg, lowByte(rtc_year)); // TODO
+        rtc_send(reg, get_year(rtc_year)); // TODO
       break;
       default:
         rtc_send(reg, EEPROM.read(EEPROM_RTC_OFFSET + reg));
@@ -610,6 +616,10 @@ void process_in_cmd(uint8_t cmd, uint8_t data)
       break;
       case 4:
         rtc_hours = data;
+        rtc_save();
+      break;
+      case 6:
+        rtc_week = data-1;
         rtc_save();
       break;
       case 7:
@@ -724,7 +734,7 @@ void readLine() {
     if (content.compareTo("HELP") == 0) {
       Serial.println(F("HELP:"));
       Serial.println(F("GET - will print a current date/time"));
-      Serial.println(F("SET YYYY MM DD HH II SS - will set RTC to the given arguments"));
+      Serial.println(F("SET YYYY MM DD HH II SS W - will set RTC to the given arguments"));
       Serial.println();
       return;
     }
@@ -738,7 +748,7 @@ void readLine() {
     }
 
     if (content.indexOf("SET") == 0) {
-      if (content.length() == 23) {
+      if (content.length() == 25) {
 
         String s_year = content.substring(4, 8);
         String s_month = content.substring(9, 11);
@@ -746,6 +756,7 @@ void readLine() {
         String s_hour = content.substring(15, 17);
         String s_min = content.substring(18, 20);
         String s_sec = content.substring(21, 23);
+        String s_week = content.substring(24,25);
 
         rtc_year = stringToInt(s_year);
         rtc_month = stringToByte(s_month);
@@ -753,25 +764,14 @@ void readLine() {
         rtc_hours = stringToByte(s_hour);
         rtc_minutes = stringToByte(s_min);
         rtc_seconds = stringToByte(s_sec);
+        rtc_week = stringToByte(s_week);
         rtc_save();
 
-        Serial.print(F("Year: "));
-        Serial.println(rtc_year);
-        Serial.print(F("Month: "));
-        Serial.println(rtc_month);
-        Serial.print(F("Day: "));
-        Serial.println(rtc_day);
-        Serial.print(F("Hours: "));
-        Serial.println(rtc_hours);
-        Serial.print(F("Minutes: "));
-        Serial.println(rtc_minutes);
-        Serial.print(F("Seconds: "));
-        Serial.println(rtc_seconds);        
-        
+        printTime();        
         Serial.println(F("Set time OK"));
         Serial.println();
       } else {
-        Serial.println(F("Invalid format given. Please use the command to set date time: SET YYYY MM DD HH II SS"));
+        Serial.println(F("Invalid format given. Please use the command to set date time: SET YYYY MM DD HH II SS W"));
         Serial.println();
       }
     }
@@ -789,6 +789,9 @@ void printTime() {
   Serial.print(rtc_minutes);
   Serial.print(F(":"));
   Serial.print(rtc_seconds);
+  Serial.print(F(" ("));
+  Serial.print(rtc_week);
+  Serial.print(F(")"));
   Serial.println();
 }
 
@@ -878,6 +881,7 @@ Serial.println(F("ZX Keyboard / mouse controller v1.1"));
   rtc_year = rtc.getYear();
   rtc_month = rtc.getMonth();
   rtc_day = rtc.getDay();
+  rtc_week = rtc.getWeekday();
 
   rtc_hours = rtc.getHour();
   rtc_minutes = rtc.getMinute();
@@ -928,6 +932,7 @@ void loop()
     rtc_year = rtc.getYear();
     rtc_month = rtc.getMonth();
     rtc_day = rtc.getDay();
+    rtc_week = rtc.getWeekday();
 
     rtc_hours = rtc.getHour();
     rtc_minutes = rtc.getMinute();
