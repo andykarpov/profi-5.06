@@ -102,7 +102,7 @@ void fill_kbd_matrix(int sc)
 {
 
   static bool is_up=false, is_e=false, is_e1=false;
-  static bool is_ctrl=false, is_alt=false, is_del=false, is_bksp = false;
+  static bool is_ctrl=false, is_alt=false, is_del=false, is_bksp = false, is_shift = false;
 
   // is extended scancode prefix
   if (sc == 0xE0) {
@@ -130,6 +130,7 @@ void fill_kbd_matrix(int sc)
     case PS2_L_SHIFT: 
     case PS2_R_SHIFT:
       matrix[profi_mode ? ZX_K_SS : ZX_K_CS] = !is_up;
+      is_shift = !is_up;
       break;
 
     // Ctrl -> CS for Profi, SS for ZX
@@ -270,72 +271,72 @@ void fill_kbd_matrix(int sc)
     case PS2_KP_8: matrix[ZX_K_8] = !is_up; break;
     case PS2_KP_9: matrix[ZX_K_9] = !is_up; break;
 
-    // Quote -> SS+P
+    // '/" -> SS+P / SS+7
     case PS2_QUOTE:
       matrix[ZX_K_SS] = !is_up;
-      matrix[ZX_K_P] = !is_up;
+      matrix[is_shift ? ZX_K_P : ZX_K_7] = !is_up;
       break;
 
-    // , -> SS+N
+    // ,/< -> SS+N / SS+R
     case PS2_COMMA:
       matrix[ZX_K_SS] = !is_up;
-      matrix[ZX_K_N] = !is_up;
+      matrix[is_shift ? ZX_K_R : ZX_K_N] = !is_up;
       break;
 
-    // . -> SS+M
+    // ./> -> SS+M / SS+T
     case PS2_PERIOD:
     case PS2_KP_PERIOD:
       matrix[ZX_K_SS] = !is_up;
-      matrix[ZX_K_M] = !is_up;
+      matrix[is_shift ? ZX_K_T : ZX_K_M] = !is_up;
       break;
 
-    // ;,: -> SS+O
+    // ;/: -> SS+O / SS+Z
     case PS2_SEMICOLON:
       matrix[ZX_K_SS] = !is_up;
-      matrix[ZX_K_O] = !is_up;
+      matrix[is_shift ? ZX_K_Z : ZX_K_O] = !is_up;
       break;
 
-    // [,{ -> SS+Y
+    // [,{ -> SS+Y / SS+F
     case PS2_L_BRACKET:
       matrix[ZX_K_SS] = !is_up;
-      matrix[ZX_K_Y] = !is_up;
+      matrix[is_shift ? ZX_K_F : ZX_K_Y] = !is_up;
       break;
 
-    // ],} -> SS+U
+    // ],} -> SS+U / SS+G
     case PS2_R_BRACKET:
       matrix[ZX_K_SS] = !is_up;
-      matrix[ZX_K_U] = !is_up;
+      matrix[is_shift ? ZX_K_G : ZX_K_U] = !is_up;
       break;
 
-    // /,? -> SS+V
+    // /,? -> SS+V / SS+C
     case PS2_SLASH:
     case PS2_KP_SLASH:
       matrix[ZX_K_SS] = !is_up;
-      matrix[ZX_K_V] = !is_up;
+      matrix[is_shift ? ZX_K_C : ZX_K_V] = !is_up;
       break;
 
-    // \,| -> SS+D
+    // \,| -> SS+D / SS+S
     case PS2_BACK_SLASH:
       matrix[ZX_K_SS] = !is_up;
-      matrix[ZX_K_D] = !is_up;
+      matrix[is_shift ? ZX_K_S : ZX_K_D] = !is_up;
       break;
 
-    // =,+ -> SS+L
+    // =,+ -> SS+L / SS+K
     case PS2_EQUALS:
       matrix[ZX_K_SS] = !is_up;
-      matrix[ZX_K_L] = !is_up;
+      matrix[is_shift ? ZX_K_K : ZX_K_L] = !is_up;
       break;
 
-    // -,_ -> SS+J
+    // -,_ -> SS+J / SS+0
     case PS2_MINUS:
       matrix[ZX_K_SS] = !is_up;
-      matrix[ZX_K_J] = !is_up;
+      matrix[is_shift ? ZX_K_0 : ZX_K_J] = !is_up;
       break;
 
-    // `,~ -> SS+7
+    // `,~ -> SS+X / SS+A
     case PS2_ACCENT:
       matrix[ZX_K_SS] = !is_up;
-      matrix[ZX_K_7] = !is_up;
+      matrix[is_shift ? ZX_K_A : ZX_K_X] = !is_up;
       break;
 
     // Keypad * -> SS+B
@@ -445,6 +446,7 @@ void fill_kbd_matrix(int sc)
     is_ctrl = false;
     is_alt = false;
     is_del = false;
+    is_shift = false;
     do_reset();
   }
   //digitalWrite(PIN_RESET, (is_ctrl && is_alt && is_del) ? LOW : HIGH);
@@ -454,6 +456,7 @@ void fill_kbd_matrix(int sc)
       is_ctrl = false;
       is_alt = false;
       is_bksp = false;
+      is_shift = false;
       clear_matrix(ZX_MATRIX_SIZE);
       transmit_keyboard_matrix();
       digitalWrite(PIN_RESET, LOW);      
