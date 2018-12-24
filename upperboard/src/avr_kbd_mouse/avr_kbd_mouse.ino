@@ -102,7 +102,7 @@ void fill_kbd_matrix(int sc)
 {
 
   static bool is_up=false, is_e=false, is_e1=false;
-  static bool is_ctrl=false, is_alt=false, is_del=false, is_bksp = false, is_shift = false;
+  static bool is_ctrl=false, is_alt=false, is_del=false, is_bksp = false, is_shift = false, is_esc = false;
 
   // is extended scancode prefix
   if (sc == 0xE0) {
@@ -199,6 +199,7 @@ void fill_kbd_matrix(int sc)
     case PS2_ESC:
       matrix[ZX_K_CS] = !is_up;
       matrix[profi_mode ? ZX_K_1 : ZX_K_SP] = !is_up;
+      is_esc = !is_up;
       break;
 
     // Backspace -> CS+0
@@ -451,6 +452,15 @@ void fill_kbd_matrix(int sc)
   }
   //digitalWrite(PIN_RESET, (is_ctrl && is_alt && is_del) ? LOW : HIGH);
 
+  // Ctrl+Alt+Esc -> MAGIC
+  if (is_ctrl && is_alt && is_esc) {
+    is_ctrl = false;
+    is_alt = false;
+    is_esc = false;
+    is_shift = false;
+    do_magic();
+  }  
+
   // Ctrl+Alt+Bksp -> REINIT controller
   if (is_ctrl && is_alt && is_bksp) {
       is_ctrl = false;
@@ -662,6 +672,15 @@ void do_reset()
   transmit_keyboard_matrix();
   delay(10);
   digitalWrite(PIN_RESET, HIGH);
+}
+
+void do_magic()
+{
+  digitalWrite(PIN_MAGIC, LOW);
+  clear_matrix(ZX_MATRIX_SIZE);
+  transmit_keyboard_matrix();
+  delay(10);
+  digitalWrite(PIN_MAGIC, HIGH);
 }
 
 void clear_matrix(int clear_size)
@@ -1005,4 +1024,3 @@ void loop()
   checkSerialInput();
   
 }
-
